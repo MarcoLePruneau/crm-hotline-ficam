@@ -11,6 +11,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Tickets from "@/pages/Tickets";
 import Clients from "@/pages/Clients";
+import CalendarSim from "@/pages/CalendarSim";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/tickets" element={<Tickets />} />
                 <Route path="/clients" element={<Clients />} />
+                <Route path="/calendar" element={<CalendarSim />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
