@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_events_simulated: {
+        Row: {
+          body: string | null
+          created_at: string
+          direction: string
+          end_at: string | null
+          id: string
+          location: string | null
+          start_at: string
+          status: string
+          technician: string | null
+          ticket_id: string | null
+          ticket_number: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          direction?: string
+          end_at?: string | null
+          id?: string
+          location?: string | null
+          start_at?: string
+          status?: string
+          technician?: string | null
+          ticket_id?: string | null
+          ticket_number?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          direction?: string
+          end_at?: string | null
+          id?: string
+          location?: string | null
+          start_at?: string
+          status?: string
+          technician?: string | null
+          ticket_id?: string | null
+          ticket_number?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           adresse: string | null
@@ -32,6 +80,7 @@ export type Database = {
           notes: string | null
           numero_serie_mastercam: string | null
           pays: string | null
+          teamviewer_id: string | null
           telephone: string | null
           updated_at: string
           ville: string | null
@@ -53,6 +102,7 @@ export type Database = {
           notes?: string | null
           numero_serie_mastercam?: string | null
           pays?: string | null
+          teamviewer_id?: string | null
           telephone?: string | null
           updated_at?: string
           ville?: string | null
@@ -74,6 +124,7 @@ export type Database = {
           notes?: string | null
           numero_serie_mastercam?: string | null
           pays?: string | null
+          teamviewer_id?: string | null
           telephone?: string | null
           updated_at?: string
           ville?: string | null
@@ -149,61 +200,91 @@ export type Database = {
         Row: {
           client_id: string | null
           client_nom: string
+          compte_rendu: string | null
+          contact_client: string | null
           created_at: string
           date_cloture: string | null
           date_ouverture: string
           description: string | null
           duree_secondes: number
+          heure_debut_effectif: string | null
+          heure_fin_effectif: string | null
           hors_contrat: boolean
           id: string
           motif: Database["public"]["Enums"]["ticket_motif"]
           motif_detail: string | null
+          outlook_body_preview: string | null
           outlook_event_id: string | null
+          outlook_location: string | null
           outlook_synced_at: string | null
           priorite: Database["public"]["Enums"]["ticket_priority"]
           resolution: string | null
           statut: Database["public"]["Enums"]["ticket_status"]
+          teamviewer_id: string | null
+          teamviewer_password: string | null
           technicien: string
+          telephone_client: string | null
+          ticket_number: string
           updated_at: string
         }
         Insert: {
           client_id?: string | null
           client_nom: string
+          compte_rendu?: string | null
+          contact_client?: string | null
           created_at?: string
           date_cloture?: string | null
           date_ouverture?: string
           description?: string | null
           duree_secondes?: number
+          heure_debut_effectif?: string | null
+          heure_fin_effectif?: string | null
           hors_contrat?: boolean
           id?: string
           motif?: Database["public"]["Enums"]["ticket_motif"]
           motif_detail?: string | null
+          outlook_body_preview?: string | null
           outlook_event_id?: string | null
+          outlook_location?: string | null
           outlook_synced_at?: string | null
           priorite?: Database["public"]["Enums"]["ticket_priority"]
           resolution?: string | null
           statut?: Database["public"]["Enums"]["ticket_status"]
+          teamviewer_id?: string | null
+          teamviewer_password?: string | null
           technicien: string
+          telephone_client?: string | null
+          ticket_number?: string
           updated_at?: string
         }
         Update: {
           client_id?: string | null
           client_nom?: string
+          compte_rendu?: string | null
+          contact_client?: string | null
           created_at?: string
           date_cloture?: string | null
           date_ouverture?: string
           description?: string | null
           duree_secondes?: number
+          heure_debut_effectif?: string | null
+          heure_fin_effectif?: string | null
           hors_contrat?: boolean
           id?: string
           motif?: Database["public"]["Enums"]["ticket_motif"]
           motif_detail?: string | null
+          outlook_body_preview?: string | null
           outlook_event_id?: string | null
+          outlook_location?: string | null
           outlook_synced_at?: string | null
           priorite?: Database["public"]["Enums"]["ticket_priority"]
           resolution?: string | null
           statut?: Database["public"]["Enums"]["ticket_status"]
+          teamviewer_id?: string | null
+          teamviewer_password?: string | null
           technicien?: string
+          telephone_client?: string | null
+          ticket_number?: string
           updated_at?: string
         }
         Relationships: [
