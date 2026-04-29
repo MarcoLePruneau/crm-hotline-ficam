@@ -2,6 +2,7 @@ import { TECHNICIENS } from "@/lib/constants";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useNavigate } from "react-router-dom";
 import { Headset, User } from "lucide-react";
+import { technicianInitials } from "@/lib/ficam";
 
 export default function Login() {
   const { setTechnicien } = useTechnician();
@@ -31,7 +32,7 @@ export default function Login() {
               className="group p-4 rounded-xl border border-border bg-card hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all text-left"
             >
               <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                <User className="w-5 h-5" />
+                <span className="text-xs font-bold">{technicianInitials(name)}</span>
               </div>
               <div className="font-medium text-sm leading-tight">{name}</div>
             </button>
