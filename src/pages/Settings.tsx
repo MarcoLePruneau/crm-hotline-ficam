@@ -50,16 +50,16 @@ export default function Settings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" /> Synchronisation Outlook</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" /> Synchronisation calendrier</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            La synchronisation bidirectionnelle avec le calendrier partagé <code className="px-1.5 py-0.5 rounded bg-muted">hot-line@ficam.com</code> nécessite la connexion au connecteur Microsoft Outlook (admin).
+            Le calendrier partagé <code className="px-1.5 py-0.5 rounded bg-muted">hot-line@ficam.com</code> est actuellement en mode simulation complète.
           </p>
           <p className="text-muted-foreground">
-            Une fois la connexion configurée, les tickets créés ici seront poussés comme événements dans le calendrier, et les rendez-vous saisis directement dans Outlook seront importés comme tickets toutes les 2 minutes.
+            Les tickets créent déjà des événements simulés au format FICAM, et la page Calendrier permet de tester le flux Outlook → App sans connexion Microsoft Entra ID.
           </p>
-          <Button variant="outline" disabled>Configurer Outlook (à venir)</Button>
+          <Button variant="outline" disabled>Microsoft Graph / Entra ID : à brancher en phase finale</Button>
         </CardContent>
       </Card>
     </div>
