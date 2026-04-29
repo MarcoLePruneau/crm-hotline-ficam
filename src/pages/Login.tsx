@@ -1,7 +1,7 @@
 import { TECHNICIENS } from "@/lib/constants";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useNavigate } from "react-router-dom";
-import { Headset, User } from "lucide-react";
+import { Headset } from "lucide-react";
 import { technicianInitials } from "@/lib/ficam";
 
 export default function Login() {
