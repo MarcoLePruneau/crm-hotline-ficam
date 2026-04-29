@@ -169,7 +169,7 @@ export default function Clients() {
       const main = list[0] ?? {};
       const hasMaintenance = maintenance.has(key);
       const hasHotline = hotline.has(key);
-      const contract_type = hasMaintenance && hasHotline ? "maintenance_hotline" : hasMaintenance ? "maintenance" : hasHotline ? "hotline" : "hors_contrat";
+      const contract_type = (hasMaintenance && hasHotline ? "maintenance_hotline" : hasMaintenance ? "maintenance" : hasHotline ? "hotline" : "hors_contrat") as ContractType;
       return {
         entreprise,
         contact_nom: main.nom || null,
