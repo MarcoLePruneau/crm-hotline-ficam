@@ -2,16 +2,18 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import {
-  LayoutDashboard, Ticket, Users, BarChart3, Settings, Headset,
+  LayoutDashboard, Ticket, Users, BarChart3, Settings, Headset, CalendarDays,
   Moon, Sun, LogOut, Menu, X
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { technicianInitials } from "@/lib/ficam";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/clients", label: "Clients", icon: Users },
+  { to: "/calendar", label: "Calendrier", icon: CalendarDays },
   { to: "/reports", label: "Rapports", icon: BarChart3 },
   { to: "/settings", label: "Paramètres", icon: Settings },
 ];
@@ -83,7 +85,7 @@ export default function Layout() {
             </button>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-accent">
               <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-                {technicien?.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                {technicianInitials(technicien)}
               </div>
               <span className="text-sm font-medium">{technicien}</span>
             </div>
