@@ -26,7 +26,7 @@ export default function Dashboard() {
 
   const today = new Date(); today.setHours(0,0,0,0);
   const ticketsToday = tickets.filter((t) => new Date(t.date_ouverture) >= today);
-  const ticketsOuverts = tickets.filter((t) => !["resolu", "ferme"].includes(t.statut));
+  const ticketsOuverts = tickets.filter((t) => !["traite", "resolu", "ferme"].includes(t.statut));
   const tempsTotal = tickets.reduce((acc, t) => acc + (t.duree_secondes ?? 0), 0);
 
   const expiringClients = clients.filter((c) => {
