@@ -1,0 +1,16 @@
+{
+  "name": "CRM Hotline FICAM",
+  "short_name": "FICAM Hotline",
+  "description": "CRM Hotline FICAM — Support technique Mastercam",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0F172A",
+  "theme_color": "#1E5FD9",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
