@@ -62,6 +62,56 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string | null
+          fonction: string | null
+          id: string
+          is_primary: boolean
+          nom: string
+          notes: string | null
+          teamviewer_id: string | null
+          telephone: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email?: string | null
+          fonction?: string | null
+          id?: string
+          is_primary?: boolean
+          nom: string
+          notes?: string | null
+          teamviewer_id?: string | null
+          telephone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string | null
+          fonction?: string | null
+          id?: string
+          is_primary?: boolean
+          nom?: string
+          notes?: string | null
+          teamviewer_id?: string | null
+          telephone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           adresse: string | null
@@ -202,6 +252,7 @@ export type Database = {
           client_nom: string
           compte_rendu: string | null
           contact_client: string | null
+          contact_id: string | null
           created_at: string
           date_cloture: string | null
           date_ouverture: string
@@ -219,6 +270,7 @@ export type Database = {
           outlook_synced_at: string | null
           priorite: Database["public"]["Enums"]["ticket_priority"]
           resolution: string | null
+          scheduled_at: string | null
           statut: Database["public"]["Enums"]["ticket_status"]
           teamviewer_id: string | null
           teamviewer_password: string | null
@@ -232,6 +284,7 @@ export type Database = {
           client_nom: string
           compte_rendu?: string | null
           contact_client?: string | null
+          contact_id?: string | null
           created_at?: string
           date_cloture?: string | null
           date_ouverture?: string
@@ -249,6 +302,7 @@ export type Database = {
           outlook_synced_at?: string | null
           priorite?: Database["public"]["Enums"]["ticket_priority"]
           resolution?: string | null
+          scheduled_at?: string | null
           statut?: Database["public"]["Enums"]["ticket_status"]
           teamviewer_id?: string | null
           teamviewer_password?: string | null
@@ -262,6 +316,7 @@ export type Database = {
           client_nom?: string
           compte_rendu?: string | null
           contact_client?: string | null
+          contact_id?: string | null
           created_at?: string
           date_cloture?: string | null
           date_ouverture?: string
@@ -279,6 +334,7 @@ export type Database = {
           outlook_synced_at?: string | null
           priorite?: Database["public"]["Enums"]["ticket_priority"]
           resolution?: string | null
+          scheduled_at?: string | null
           statut?: Database["public"]["Enums"]["ticket_status"]
           teamviewer_id?: string | null
           teamviewer_password?: string | null
@@ -293,6 +349,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
             referencedColumns: ["id"]
           },
         ]
@@ -323,6 +386,9 @@ export type Database = {
         | "attente_client"
         | "resolu"
         | "ferme"
+        | "a_rappeler"
+        | "a_appeler"
+        | "traite"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -470,6 +536,9 @@ export const Constants = {
         "attente_client",
         "resolu",
         "ferme",
+        "a_rappeler",
+        "a_appeler",
+        "traite",
       ],
     },
   },
