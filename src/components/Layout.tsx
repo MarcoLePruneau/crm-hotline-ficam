@@ -2,12 +2,13 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import {
-  LayoutDashboard, Ticket, Users, BarChart3, Settings, Headset, CalendarDays,
+  LayoutDashboard, Ticket, Users, BarChart3, Settings, CalendarDays,
   Moon, Sun, LogOut, Menu, X
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { technicianInitials } from "@/lib/ficam";
+import logo from "@/assets/ficam-logo.png";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -37,9 +38,7 @@ export default function Layout() {
         open ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="h-16 flex items-center gap-2 px-5 border-b border-sidebar-border">
-          <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
-            <Headset className="w-5 h-5" />
-          </div>
+          <img src={logo} alt="FICAM" className="w-9 h-9 rounded-lg" />
           <div>
             <div className="font-bold text-sidebar-foreground leading-tight">FICAM</div>
             <div className="text-xs text-muted-foreground">Hotline CRM</div>
