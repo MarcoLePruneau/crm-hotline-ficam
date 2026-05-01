@@ -2,16 +2,20 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Ticket, AlertTriangle, Clock, TrendingUp, Users } from "lucide-react";
-import { getContractStatus, formatSeconds } from "@/lib/contractStatus";
+import { Ticket, AlertTriangle, Clock, TrendingUp, PhoneCall, Hourglass, Users } from "lucide-react";
+import { getContractStatus } from "@/lib/contractStatus";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { MOTIFS, PRIORITES, STATUTS } from "@/lib/constants";
+import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, ACTIVE_STATUTS } from "@/lib/constants";
+import { useTechnician } from "@/hooks/useTechnician";
 
 export default function Dashboard() {
+  const { technicien } = useTechnician();
   const [tickets, setTickets] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+
+  const isCimcoOnly = technicien === "Michael DERLON";
 
   useEffect(() => {
     (async () => {
@@ -19,20 +23,51 @@ export default function Dashboard() {
         supabase.from("tickets").select("*").order("date_ouverture", { ascending: false }).limit(500),
         supabase.from("clients").select("*").limit(2000),
       ]);
-      setTickets(t.data ?? []);
-      setClients(c.data ?? []);
+      let tick = t.data ?? [];
+      let cli = c.data ?? [];
+      if (isCimcoOnly) {
+        const cimcoIds = new Set(cli.filter((x) => x.contract_type === "cimco").map((x) => x.id));
+        cli = cli.filter((x) => x.contract_type === "cimco");
+        tick = tick.filter((x) => x.motif === "cimco" || cimcoIds.has(x.client_id));
+      }
+      setTickets(tick);
+      setClients(cli);
     })();
-  }, []);
+  }, [technicien]);
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const ticketsToday = tickets.filter((t) => new Date(t.date_ouverture) >= today);
-  const ticketsOuverts = tickets.filter((t) => !["traite", "resolu", "ferme"].includes(t.statut));
-  const tempsTotal = tickets.reduce((acc, t) => acc + (t.duree_secondes ?? 0), 0);
+  // Compteurs par statut
+  const countByStatut = (s: string) => tickets.filter((t) => t.statut === s).length;
+  const compteurs = [
+    { label: "Ouverts",          value: countByStatut("ouvert"),          color: STATUT_COLORS.ouvert.bg,         icon: Ticket },
+    { label: "En cours",          value: countByStatut("en_cours"),        color: STATUT_COLORS.en_cours.bg,       icon: Clock },
+    { label: "À rappeler",        value: countByStatut("a_rappeler") + countByStatut("a_appeler"), color: STATUT_COLORS.a_rappeler.bg, icon: PhoneCall },
+    { label: "En attente client", value: countByStatut("attente_client"),  color: STATUT_COLORS.attente_client.bg, icon: Hourglass },
+  ];
 
-  const expiringClients = clients.filter((c) => {
-    const s = getContractStatus(c.date_echeance_maintenance);
-    return s === "expired" || s === "expiring";
-  });
+  // Flux de tickets ACTIFS uniquement (pas d'historique)
+  const activeTickets = tickets.filter((t) => (ACTIVE_STATUTS as readonly string[]).includes(t.statut));
+
+  // Alertes contrats : on précise le type
+  type Alert = { client: any; type: string; expiry: string | null; level: "expired" | "expiring" };
+  const alerts: Alert[] = [];
+  for (const c of clients) {
+    const checks: { type: string; date: string | null }[] = [];
+    if (c.contract_type === "hotline" || c.contract_type === "maintenance_hotline") {
+      checks.push({ type: "Hotline", date: c.date_echeance_hotline });
+    }
+    if (c.contract_type === "maintenance" || c.contract_type === "maintenance_hotline") {
+      checks.push({ type: "Maintenance", date: c.date_echeance_maintenance });
+    }
+    if (c.contract_type === "cimco") {
+      checks.push({ type: "CIMCO", date: c.date_echeance_maintenance || c.date_echeance_hotline });
+    }
+    for (const ck of checks) {
+      const s = getContractStatus(ck.date);
+      if (s === "expired" || s === "expiring") {
+        alerts.push({ client: c, type: ck.type, expiry: ck.date, level: s });
+      }
+    }
+  }
 
   // Alertes commerciales : >3 appels même motif ce mois
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
@@ -46,36 +81,55 @@ export default function Dashboard() {
   });
   const alertesCo = Array.from(counter.values()).filter((v) => v.count > 3);
 
-  const stats = [
-    { label: "Tickets aujourd'hui", value: ticketsToday.length, icon: Ticket, color: "bg-primary" },
-    { label: "Tickets ouverts", value: ticketsOuverts.length, icon: Clock, color: "bg-warning" },
-    { label: "Temps total cumulé", value: formatSeconds(tempsTotal), icon: TrendingUp, color: "bg-success" },
-    { label: "Clients", value: clients.length, icon: Users, color: "bg-accent-foreground" },
-  ];
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-        <p className="text-muted-foreground">Vue d'ensemble de l'activité hotline</p>
+        <p className="text-muted-foreground">
+          Vue d'ensemble de l'activité hotline
+          {isCimcoOnly && <Badge variant="outline" className="ml-2">Vue CIMCO</Badge>}
+        </p>
       </div>
 
+      {/* Compteurs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
+        {compteurs.map((s) => (
           <Card key={s.label}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-sm text-muted-foreground">{s.label}</div>
-                  <div className="text-2xl font-bold mt-1">{s.value}</div>
+                  <div className="text-3xl font-bold mt-1">{s.value}</div>
                 </div>
-                <div className={`w-10 h-10 rounded-lg ${s.color} text-primary-foreground flex items-center justify-center`}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white" style={{ background: s.color }}>
                   <s.icon className="w-5 h-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Compteur clients secondaire */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground">Clients</div>
+              <div className="text-2xl font-bold mt-1">{clients.length}</div>
+            </div>
+            <Users className="w-5 h-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 flex items-center justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground">Tickets actifs</div>
+              <div className="text-2xl font-bold mt-1">{activeTickets.length}</div>
+            </div>
+            <TrendingUp className="w-5 h-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -87,26 +141,24 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {expiringClients.length === 0 ? (
+            {alerts.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucun contrat à surveiller.</p>
             ) : (
               <div className="space-y-2 max-h-80 overflow-auto">
-                {expiringClients.slice(0, 30).map((c) => {
-                  const s = getContractStatus(c.date_echeance_maintenance);
-                  return (
-                    <Link key={c.id} to="/clients" className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent">
-                      <div>
-                        <div className="font-medium text-sm">{c.entreprise}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Échéance : {c.date_echeance_maintenance && format(new Date(c.date_echeance_maintenance), "dd MMM yyyy", { locale: fr })}
-                        </div>
+                {alerts.slice(0, 30).map((a, i) => (
+                  <Link key={a.client.id + a.type + i} to="/clients" className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent">
+                    <div>
+                      <div className="font-medium text-sm">{a.client.entreprise}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Contrat {a.type} {a.level === "expired" ? "expiré" : "expire bientôt"}
+                        {a.expiry && ` — ${format(new Date(a.expiry), "dd MMM yyyy", { locale: fr })}`}
                       </div>
-                      <Badge variant={s === "expired" ? "destructive" : "secondary"} className={s === "expiring" ? "bg-warning text-warning-foreground" : ""}>
-                        {s === "expired" ? "Expiré" : "< 30 jours"}
-                      </Badge>
-                    </Link>
-                  );
-                })}
+                    </div>
+                    <Badge variant={a.level === "expired" ? "destructive" : "secondary"} className={a.level === "expiring" ? "bg-warning text-warning-foreground" : ""}>
+                      Contrat {a.type} {a.level === "expired" ? "expiré" : "< 30 j"}
+                    </Badge>
+                  </Link>
+                ))}
               </div>
             )}
           </CardContent>
@@ -127,6 +179,7 @@ export default function Dashboard() {
                 {alertesCo.map((a) => {
                   const sugg = a.motif === "aide_programmation" ? "→ Suggérer Formation"
                     : a.motif === "modification_pp" ? "→ Suggérer Intégration PP"
+                    : a.motif === "cimco" ? "→ Suggérer Souscription CIMCO"
                     : "→ Suggérer Prestation de service";
                   return (
                     <div key={a.client_id + a.motif} className="p-3 rounded-lg border bg-accent/30">
@@ -135,7 +188,7 @@ export default function Dashboard() {
                         <Badge>{a.count} appels</Badge>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {MOTIFS[a.motif as keyof typeof MOTIFS]} — <span className="font-medium text-primary">{sugg}</span>
+                        {MOTIFS[a.motif as keyof typeof MOTIFS] ?? a.motif} — <span className="font-medium text-primary">{sugg}</span>
                       </div>
                     </div>
                   );
@@ -146,36 +199,41 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Flux de tickets actifs uniquement */}
       <Card>
         <CardHeader>
-          <CardTitle>Derniers tickets</CardTitle>
+          <CardTitle>Tickets en cours</CardTitle>
         </CardHeader>
         <CardContent>
-          {tickets.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucun ticket. <Link to="/tickets" className="text-primary underline">Créer le premier</Link>.</p>
+          {activeTickets.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucun ticket actif. <Link to="/tickets" className="text-primary underline">Créer un ticket</Link>.</p>
           ) : (
             <div className="space-y-1">
-              {tickets.slice(0, 10).map((t) => (
-                <Link key={t.id} to="/tickets" className="flex items-center justify-between p-3 rounded-lg hover:bg-accent">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Badge
-                      className={
-                        t.priorite === "critique" ? "bg-critical text-critical-foreground"
-                        : t.priorite === "haute" ? "bg-warning text-warning-foreground"
-                        : ""
-                      }
-                      variant={t.priorite === "basse" ? "secondary" : "default"}
-                    >
-                      {PRIORITES[t.priorite as keyof typeof PRIORITES]}
-                    </Badge>
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{t.client_nom}</div>
-                      <div className="text-xs text-muted-foreground">{MOTIFS[t.motif as keyof typeof MOTIFS]} • {t.technicien}</div>
+              {activeTickets.slice(0, 15).map((t) => {
+                const sc = STATUT_COLORS[t.statut];
+                return (
+                  <Link key={t.id} to="/tickets" className="flex items-center justify-between p-3 rounded-lg hover:bg-accent">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Badge style={{ background: sc?.bg, color: sc?.fg }}>{sc?.label ?? t.statut}</Badge>
+                      <Badge
+                        className={
+                          t.priorite === "critique" ? "bg-critical text-critical-foreground"
+                          : t.priorite === "haute" ? "bg-warning text-warning-foreground"
+                          : ""
+                        }
+                        variant={t.priorite === "basse" ? "secondary" : "default"}
+                      >
+                        {PRIORITES[t.priorite as keyof typeof PRIORITES]}
+                      </Badge>
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{t.client_nom}</div>
+                        <div className="text-xs text-muted-foreground">{MOTIFS[t.motif as keyof typeof MOTIFS] ?? t.motif} • {t.technicien}</div>
+                      </div>
                     </div>
-                  </div>
-                  <Badge variant="outline">{STATUTS[t.statut as keyof typeof STATUTS]}</Badge>
-                </Link>
-              ))}
+                    <Badge variant="outline" className="font-mono">{t.ticket_number}</Badge>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </CardContent>

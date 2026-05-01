@@ -7,13 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Monitor, UserPlus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, Motif, Priorite, Statut } from "@/lib/constants";
-import { hotlineRight, technicianInitials } from "@/lib/ficam";
+import { hotlineRight, technicianInitials, launchTeamViewer, formatTicketBlock } from "@/lib/ficam";
 import { useTechnician } from "@/hooks/useTechnician";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import tvLogo from "@/assets/teamviewer.png";
 
 type Props = {
   open: boolean;
@@ -315,10 +316,10 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
                   type="button"
                   size="icon"
                   variant="outline"
-                  onClick={() => form.teamviewer_id && (window.location.href = `teamviewerapi://remotecontrol?connectcc=${encodeURIComponent(form.teamviewer_id.replace(/\s+/g, ""))}`)}
-                  title="Prendre la main"
+                  onClick={() => launchTeamViewer(form.teamviewer_id, form.teamviewer_password)}
+                  title={form.teamviewer_id && form.teamviewer_password ? "Connexion auto" : "Ouvrir TeamViewer"}
                 >
-                  <Monitor className="w-4 h-4" />
+                  <img src={tvLogo} alt="TeamViewer" className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -375,12 +376,24 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
           {/* Aperçu format de sortie FICAM */}
           {form.client_nom && (
             <div className="rounded-md border bg-muted/30 p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap">
-{`Client : ${form.client_nom} | Contact : ${form.contact_client || "—"}
-N° Ticket : ${ticket?.ticket_number ?? "(à générer)"} | Tél : ${form.telephone_client || "—"}
-Motif : ${MOTIFS[form.motif as Motif]} | Droit Hot-line : ${right ?? "—"}
-Technicien : ${technicianInitials(ticket?.technicien ?? technicien)} | TV : ${form.teamviewer_id || "—"} | MDP : ${form.teamviewer_password || ""}
-Durée : ${ticket?.heure_debut_effectif ? format(new Date(ticket.heure_debut_effectif), "HH:mm") : "—"} / ${ticket?.heure_fin_effectif ? format(new Date(ticket.heure_fin_effectif), "HH:mm") : "—"}
-Compte rendu : ${form.compte_rendu || ""}`}
+{formatTicketBlock(
+  {
+    ticket_number: ticket?.ticket_number,
+    client_nom: form.client_nom,
+    contact_client: form.contact_client,
+    telephone_client: form.telephone_client,
+    motif: form.motif,
+    technicien: ticket?.technicien ?? technicien ?? "",
+    teamviewer_id: form.teamviewer_id,
+    teamviewer_password: form.teamviewer_password,
+    compte_rendu: form.compte_rendu,
+    description: form.description,
+    date_ouverture: ticket?.date_ouverture,
+    heure_debut_effectif: ticket?.heure_debut_effectif,
+    heure_fin_effectif: ticket?.heure_fin_effectif,
+  } as any,
+  client,
+)}
             </div>
           )}
 

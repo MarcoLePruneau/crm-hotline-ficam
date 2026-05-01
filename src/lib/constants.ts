@@ -18,6 +18,7 @@ export const CONTRACT_TYPES = {
   maintenance_hotline: "Maintenance + Hotline",
   hotline: "Hotline seule",
   maintenance: "Maintenance seule",
+  cimco: "Contrat CIMCO",
   hors_contrat: "Hors Contrat",
 } as const;
 
@@ -26,6 +27,7 @@ export const MOTIFS = {
   modification_pp: "Modification Post-Processeur",
   installation: "Installation",
   mise_a_jour_licence: "Mise à jour licence",
+  cimco: "CIMCO",
   autre: "Autre",
 } as const;
 
@@ -42,9 +44,13 @@ export const STATUTS = {
   a_appeler: "À appeler (Urgent)",
   attente_client: "En attente client",
   traite: "Traité",
-  resolu: "Résolu",
   ferme: "Fermé",
 } as const;
+
+// Statuts considérés comme "actifs" pour le dashboard / flux de tickets
+export const ACTIVE_STATUTS = ["ouvert", "en_cours", "a_rappeler", "a_appeler"] as const;
+// Statuts considérés comme "terminés"
+export const CLOSED_STATUTS = ["traite", "resolu", "ferme"] as const;
 
 // Couleurs des statuts (HSL) pour le calendrier
 export const STATUT_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
@@ -52,9 +58,9 @@ export const STATUT_COLORS: Record<string, { bg: string; fg: string; label: stri
   en_cours:       { bg: "hsl(220 9% 46%)",  fg: "hsl(0 0% 100%)", label: "En cours" },
   a_rappeler:     { bg: "hsl(38 92% 50%)",  fg: "hsl(0 0% 10%)",  label: "À rappeler" },
   a_appeler:      { bg: "hsl(0 84% 50%)",   fg: "hsl(0 0% 100%)", label: "À appeler (Urgent)" },
-  attente_client: { bg: "hsl(280 65% 55%)", fg: "hsl(0 0% 100%)", label: "Attente client" },
+  attente_client: { bg: "hsl(280 65% 55%)", fg: "hsl(0 0% 100%)", label: "En attente client" },
   traite:         { bg: "hsl(142 71% 38%)", fg: "hsl(0 0% 100%)", label: "Traité" },
-  resolu:         { bg: "hsl(142 71% 38%)", fg: "hsl(0 0% 100%)", label: "Résolu" },
+  resolu:         { bg: "hsl(142 71% 38%)", fg: "hsl(0 0% 100%)", label: "Traité" },
   ferme:          { bg: "hsl(220 9% 30%)",  fg: "hsl(0 0% 100%)", label: "Fermé" },
 };
 

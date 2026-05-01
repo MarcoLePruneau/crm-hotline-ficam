@@ -107,4 +107,10 @@
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground; font-feature-settings: "cv02","cv03","cv04","cv11"; }
+  /* Supprime les bordures/anneaux bleus autour des dialogues/fenêtres */
+  [role="dialog"], [data-radix-popper-content-wrapper] > * {
+    outline: none !important;
+    box-shadow: 0 25px 50px -12px hsl(0 0% 0% / 0.25) !important;
+  }
+  [role="dialog"]:focus, [role="dialog"]:focus-visible { outline: none !important; box-shadow: 0 25px 50px -12px hsl(0 0% 0% / 0.25) !important; }
 }

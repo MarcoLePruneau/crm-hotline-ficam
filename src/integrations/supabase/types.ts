@@ -373,12 +373,14 @@ export type Database = {
         | "hotline"
         | "maintenance"
         | "hors_contrat"
+        | "cimco"
       ticket_motif:
         | "aide_programmation"
         | "modification_pp"
         | "installation"
         | "mise_a_jour_licence"
         | "autre"
+        | "cimco"
       ticket_priority: "basse" | "haute" | "critique"
       ticket_status:
         | "ouvert"
@@ -521,6 +523,7 @@ export const Constants = {
         "hotline",
         "maintenance",
         "hors_contrat",
+        "cimco",
       ],
       ticket_motif: [
         "aide_programmation",
@@ -528,6 +531,7 @@ export const Constants = {
         "installation",
         "mise_a_jour_licence",
         "autre",
+        "cimco",
       ],
       ticket_priority: ["basse", "haute", "critique"],
       ticket_status: [
