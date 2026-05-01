@@ -25,9 +25,31 @@ export const technicianInitials = (name?: string | null) => {
 
 export const hotlineRight = (contractType?: ContractType | null, hotlineExpiry?: string | null) => {
   if (contractType === "hors_contrat") return "HORS CONTRAT";
+  if (contractType === "cimco") return "OUI";
   if (contractType === "maintenance") return "NON";
   if (hotlineExpiry && new Date(hotlineExpiry) < new Date()) return "HORS CONTRAT";
   return "OUI";
+};
+
+/**
+ * Lance TeamViewer. Si id+mdp sont fournis, ouvre la session avec connexion automatique.
+ * - URL scheme TeamViewer (cross-platform): `teamviewer10://control?device=ID&password=MDP`
+ * - Fallback: ouverture simple via teamviewerapi://
+ */
+export const launchTeamViewer = (id?: string | null, password?: string | null) => {
+  const cleanId = (id || "").replace(/\s+/g, "");
+  if (cleanId && password) {
+    // Connexion auto (TV 10+ supporte ce schéma sur Win/macOS/Linux)
+    window.location.href = `teamviewer10://control?device=${encodeURIComponent(cleanId)}&password=${encodeURIComponent(password)}`;
+    return "auto";
+  }
+  if (cleanId) {
+    window.location.href = `teamviewerapi://remotecontrol?connectcc=${encodeURIComponent(cleanId)}`;
+    return "id-only";
+  }
+  // Ouverture simple de l'application
+  window.location.href = `teamviewer://`;
+  return "open";
 };
 
 const fmtDateTime = (value?: string | Date | null) => {
