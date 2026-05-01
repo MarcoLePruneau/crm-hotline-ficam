@@ -376,12 +376,24 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
           {/* Aperçu format de sortie FICAM */}
           {form.client_nom && (
             <div className="rounded-md border bg-muted/30 p-3 text-xs font-mono leading-relaxed whitespace-pre-wrap">
-{`Client : ${form.client_nom} | Contact : ${form.contact_client || "—"}
-N° Ticket : ${ticket?.ticket_number ?? "(à générer)"} | Tél : ${form.telephone_client || "—"}
-Motif : ${MOTIFS[form.motif as Motif]} | Droit Hot-line : ${right ?? "—"}
-Technicien : ${technicianInitials(ticket?.technicien ?? technicien)} | TV : ${form.teamviewer_id || "—"} | MDP : ${form.teamviewer_password || ""}
-Durée : ${ticket?.heure_debut_effectif ? format(new Date(ticket.heure_debut_effectif), "HH:mm") : "—"} / ${ticket?.heure_fin_effectif ? format(new Date(ticket.heure_fin_effectif), "HH:mm") : "—"}
-Compte rendu : ${form.compte_rendu || ""}`}
+{formatTicketBlock(
+  {
+    ticket_number: ticket?.ticket_number,
+    client_nom: form.client_nom,
+    contact_client: form.contact_client,
+    telephone_client: form.telephone_client,
+    motif: form.motif,
+    technicien: ticket?.technicien ?? technicien ?? "",
+    teamviewer_id: form.teamviewer_id,
+    teamviewer_password: form.teamviewer_password,
+    compte_rendu: form.compte_rendu,
+    description: form.description,
+    date_ouverture: ticket?.date_ouverture,
+    heure_debut_effectif: ticket?.heure_debut_effectif,
+    heure_fin_effectif: ticket?.heure_fin_effectif,
+  } as any,
+  client,
+)}
             </div>
           )}
 
