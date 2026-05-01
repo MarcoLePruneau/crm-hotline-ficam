@@ -88,30 +88,35 @@ type FicamClient = {
 
 export const calendarTitle = (clientName?: string | null) => `[${(clientName || "CLIENT").toUpperCase()}]`;
 
-export const buildFicamCalendarBody = (ticket: FicamTicket, client?: FicamClient | null) => {
+/**
+ * Format officiel d'affichage / export du ticket.
+ * Saut de ligne entre chaque bloc, comme demandé par FICAM.
+ */
+export const formatTicketBlock = (ticket: FicamTicket, client?: FicamClient | null) => {
   const motif = ticket.motif && MOTIFS[ticket.motif as Motif] ? MOTIFS[ticket.motif as Motif] : ticket.motif || "";
   const tv = ticket.teamviewer_id || client?.teamviewer_id || "";
   const contact = ticket.contact_client || client?.contact_nom || "";
   const phone = ticket.telephone_client || client?.telephone || "";
-  const start = ticket.heure_debut_effectif || ticket.date_ouverture || null;
+  const start = ticket.date_ouverture || ticket.heure_debut_effectif || null;
   const end = ticket.heure_fin_effectif || null;
-
   return [
-    `Client : ${ticket.client_nom || client?.entreprise || ""}`,
-    `N° du ticket : ${ticket.ticket_number || ""}`,
-    `Contact client : ${contact}`,
-    `Téléphone : ${phone}`,
-    `Motif de l’appel : ${motif}`,
-    `Droit Hot-line : ${hotlineRight(client?.contract_type, client?.date_echeance_hotline)}`,
+    `Client : ${ticket.client_nom || client?.entreprise || ""} | Contact : ${contact || "—"}`,
     "",
-    `Technicien : ${technicianInitials(ticket.technicien)}`,
-    `Heure début / fin appel (effectif) : ${fmtHour(start)} / ${fmtHour(end)}`,
-    `TeamViewer : ${tv}`,
-    `MDP : ${ticket.teamviewer_password || ""}`,
+    `N° Ticket : ${ticket.ticket_number || ""} | Tél : ${phone || "—"}`,
+    "",
+    `Motif : ${motif} | Droit Hot-line : ${hotlineRight(client?.contract_type, client?.date_echeance_hotline)}`,
+    "",
+    `Technicien : ${technicianInitials(ticket.technicien)} | ID TEAMVIEWER : ${tv || "—"} | MDP : ${ticket.teamviewer_password || ""}`,
+    "",
+    `Durée : ${fmtDateTime(start)} / ${fmtDateTime(end) || "—"}`,
+    "",
+    `Description : ${(ticket as any).description || ""}`,
     "",
     `Compte rendu : ${ticket.compte_rendu || ""}`,
   ].join("\n");
 };
+
+export const buildFicamCalendarBody = formatTicketBlock;
 
 export const simulatedEventRange = (ticket: FicamTicket) => {
   const start = new Date(ticket.heure_debut_effectif || ticket.date_ouverture || new Date());
