@@ -181,6 +181,45 @@ export type Database = {
         }
         Relationships: []
       }
+      direct_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string
+          read_at: string | null
+          recipient: string
+          sender: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          read_at?: string | null
+          recipient: string
+          sender: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          read_at?: string | null
+          recipient?: string
+          sender?: string
+        }
+        Relationships: []
+      }
       outlook_sync_state: {
         Row: {
           calendar_email: string
@@ -204,6 +243,27 @@ export type Database = {
           delta_token?: string | null
           id?: string
           last_sync_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      technician_presence: {
+        Row: {
+          last_seen: string
+          status: string
+          technicien: string
+          updated_at: string
+        }
+        Insert: {
+          last_seen?: string
+          status?: string
+          technicien: string
+          updated_at?: string
+        }
+        Update: {
+          last_seen?: string
+          status?: string
+          technicien?: string
           updated_at?: string
         }
         Relationships: []
