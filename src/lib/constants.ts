@@ -60,7 +60,6 @@ export const STATUT_COLORS: Record<string, { bg: string; fg: string; label: stri
   a_appeler:      { bg: "hsl(0 84% 50%)",   fg: "hsl(0 0% 100%)", label: "À appeler (Urgent)" },
   attente_client: { bg: "hsl(280 65% 55%)", fg: "hsl(0 0% 100%)", label: "En attente client" },
   traite:         { bg: "hsl(142 71% 38%)", fg: "hsl(0 0% 100%)", label: "Traité" },
-  resolu:         { bg: "hsl(142 71% 38%)", fg: "hsl(0 0% 100%)", label: "Traité" },
   ferme:          { bg: "hsl(220 9% 30%)",  fg: "hsl(0 0% 100%)", label: "Fermé" },
 };
 

@@ -3,7 +3,7 @@ import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import {
   LayoutDashboard, Ticket, Users, BarChart3, Settings, CalendarDays,
-  Moon, Sun, LogOut, Menu, X
+  MessageSquare, Moon, Sun, LogOut, Menu, X
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const NAV = [
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/clients", label: "Clients", icon: Users },
   { to: "/calendar", label: "Calendrier", icon: CalendarDays },
+  { to: "/messages", label: "Messagerie", icon: MessageSquare },
   { to: "/reports", label: "Rapports", icon: BarChart3 },
   { to: "/settings", label: "Paramètres", icon: Settings },
 ];
