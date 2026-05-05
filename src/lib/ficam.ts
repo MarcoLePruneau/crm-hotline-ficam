@@ -124,6 +124,7 @@ type FicamTicket = {
   teamviewer_password?: string | null;
   compte_rendu?: string | null;
   date_ouverture?: string | null;
+  hotline_override?: string | null;
 };
 
 type FicamClient = {
@@ -132,6 +133,7 @@ type FicamClient = {
   telephone?: string | null;
   contract_type?: ContractType | null;
   date_echeance_hotline?: string | null;
+  date_echeance_maintenance?: string | null;
   teamviewer_id?: string | null;
 };
 
@@ -148,12 +150,15 @@ export const formatTicketBlock = (ticket: FicamTicket, client?: FicamClient | nu
   const phone = ticket.telephone_client || client?.telephone || "";
   const start = ticket.date_ouverture || ticket.heure_debut_effectif || null;
   const end = ticket.heure_fin_effectif || null;
+  const droit =
+    ticket.hotline_override ||
+    hotlineRight(client?.contract_type, client?.date_echeance_hotline, client?.date_echeance_maintenance);
   return [
     `Client : ${ticket.client_nom || client?.entreprise || ""} | Contact : ${contact || "—"}`,
     "",
     `N° Ticket : ${ticket.ticket_number || ""} | Tél : ${phone || "—"}`,
     "",
-    `Motif : ${motif} | Droit Hot-line : ${hotlineRight(client?.contract_type, client?.date_echeance_hotline)}`,
+    `Motif : ${motif} | Droit Hot-line : ${droit}`,
     "",
     `Technicien : ${technicianInitials(ticket.technicien)} | ID TEAMVIEWER : ${tv || "—"} | MDP : ${ticket.teamviewer_password || ""}`,
     "",
