@@ -321,6 +321,7 @@ export type Database = {
           heure_debut_effectif: string | null
           heure_fin_effectif: string | null
           hors_contrat: boolean
+          hotline_override: string | null
           id: string
           motif: Database["public"]["Enums"]["ticket_motif"]
           motif_detail: string | null
@@ -353,6 +354,7 @@ export type Database = {
           heure_debut_effectif?: string | null
           heure_fin_effectif?: string | null
           hors_contrat?: boolean
+          hotline_override?: string | null
           id?: string
           motif?: Database["public"]["Enums"]["ticket_motif"]
           motif_detail?: string | null
@@ -385,6 +387,7 @@ export type Database = {
           heure_debut_effectif?: string | null
           heure_fin_effectif?: string | null
           hors_contrat?: boolean
+          hotline_override?: string | null
           id?: string
           motif?: Database["public"]["Enums"]["ticket_motif"]
           motif_detail?: string | null

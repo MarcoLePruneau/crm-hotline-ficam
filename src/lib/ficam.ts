@@ -23,13 +23,62 @@ export const technicianInitials = (name?: string | null) => {
   return TECHNICIAN_INITIALS[name] ?? name.split(/[\s-]+/).filter(Boolean).map((p) => p[0]).join("").slice(0, 3).toUpperCase();
 };
 
-export const hotlineRight = (contractType?: ContractType | null, hotlineExpiry?: string | null) => {
-  if (contractType === "hors_contrat") return "HORS CONTRAT";
+/**
+ * Calcule le droit Hot-line.
+ * Règle métier : un Contrat de Maintenance OU un Contrat Hotline OU CIMCO ⇒ "OUI".
+ * Aucun contrat (hors_contrat) ou échéances dépassées ⇒ "HORS CONTRAT".
+ */
+export const hotlineRight = (
+  contractType?: ContractType | null,
+  hotlineExpiry?: string | null,
+  maintenanceExpiry?: string | null,
+): "OUI" | "NON" | "HORS CONTRAT" => {
+  if (contractType === "hors_contrat" || !contractType) return "HORS CONTRAT";
+  const now = new Date();
+  const hotlineActive = hotlineExpiry ? new Date(hotlineExpiry) >= now : false;
+  const maintActive = maintenanceExpiry ? new Date(maintenanceExpiry) >= now : false;
   if (contractType === "cimco") return "OUI";
-  if (contractType === "maintenance") return "NON";
-  if (hotlineExpiry && new Date(hotlineExpiry) < new Date()) return "HORS CONTRAT";
+  if (contractType === "maintenance_hotline") return hotlineActive || maintActive ? "OUI" : "HORS CONTRAT";
+  if (contractType === "hotline") return hotlineActive ? "OUI" : "HORS CONTRAT";
+  if (contractType === "maintenance") return maintActive ? "OUI" : "HORS CONTRAT"; // Maintenance = Hotline incluse
   return "OUI";
 };
+
+/**
+ * Nettoyage / normalisation des noms de contacts.
+ * - "jean dupont" => "Jean DUPONT"
+ * - "DUPONT jean-pierre" => "Jean-Pierre DUPONT"
+ * Heuristique : on considère le dernier token (en MAJ s'il l'est, sinon dernier mot) comme le NOM,
+ * les autres comme prénom(s). En cas d'échec, on capitalise simplement.
+ */
+export const normalizeContactName = (raw: string): string => {
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const parts = cleaned.split(" ");
+  const cap = (s: string) =>
+    s
+      .split("-")
+      .map((seg) => seg.charAt(0).toUpperCase() + seg.slice(1).toLowerCase())
+      .join("-");
+  if (parts.length === 1) return cap(parts[0]);
+  // Si un token est déjà tout en majuscules, on le considère comme NOM
+  const upperIdx = parts.findIndex((p) => p.length > 1 && p === p.toUpperCase());
+  let nomToken: string;
+  let prenomTokens: string[];
+  if (upperIdx >= 0) {
+    nomToken = parts[upperIdx];
+    prenomTokens = parts.filter((_, i) => i !== upperIdx);
+  } else {
+    // par défaut: dernier mot = NOM
+    nomToken = parts[parts.length - 1];
+    prenomTokens = parts.slice(0, -1);
+  }
+  const prenom = prenomTokens.map(cap).join(" ");
+  const nom = nomToken.toUpperCase();
+  return prenom ? `${prenom} ${nom}` : nom;
+};
+
+export const cleanText = (s?: string | null) => (s ?? "").replace(/\s+/g, " ").trim();
 
 /**
  * Lance TeamViewer. Si id+mdp sont fournis, ouvre la session avec connexion automatique.
@@ -75,6 +124,7 @@ type FicamTicket = {
   teamviewer_password?: string | null;
   compte_rendu?: string | null;
   date_ouverture?: string | null;
+  hotline_override?: string | null;
 };
 
 type FicamClient = {
@@ -83,6 +133,7 @@ type FicamClient = {
   telephone?: string | null;
   contract_type?: ContractType | null;
   date_echeance_hotline?: string | null;
+  date_echeance_maintenance?: string | null;
   teamviewer_id?: string | null;
 };
 
@@ -99,12 +150,15 @@ export const formatTicketBlock = (ticket: FicamTicket, client?: FicamClient | nu
   const phone = ticket.telephone_client || client?.telephone || "";
   const start = ticket.date_ouverture || ticket.heure_debut_effectif || null;
   const end = ticket.heure_fin_effectif || null;
+  const droit =
+    ticket.hotline_override ||
+    hotlineRight(client?.contract_type, client?.date_echeance_hotline, client?.date_echeance_maintenance);
   return [
     `Client : ${ticket.client_nom || client?.entreprise || ""} | Contact : ${contact || "—"}`,
     "",
     `N° Ticket : ${ticket.ticket_number || ""} | Tél : ${phone || "—"}`,
     "",
-    `Motif : ${motif} | Droit Hot-line : ${hotlineRight(client?.contract_type, client?.date_echeance_hotline)}`,
+    `Motif : ${motif} | Droit Hot-line : ${droit}`,
     "",
     `Technicien : ${technicianInitials(ticket.technicien)} | ID TEAMVIEWER : ${tv || "—"} | MDP : ${ticket.teamviewer_password || ""}`,
     "",
