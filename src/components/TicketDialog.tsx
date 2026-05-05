@@ -7,11 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, UserPlus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, Motif, Priorite, Statut } from "@/lib/constants";
-import { hotlineRight, technicianInitials, launchTeamViewer, formatTicketBlock } from "@/lib/ficam";
+import { hotlineRight, technicianInitials, launchTeamViewer, formatTicketBlock, normalizeContactName, cleanText } from "@/lib/ficam";
 import { useTechnician } from "@/hooks/useTechnician";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import tvLogo from "@/assets/teamviewer.png";
@@ -39,6 +42,7 @@ const emptyForm = {
   description: "",
   compte_rendu: "",
   scheduled_at: "",
+  hotline_override: "" as "" | "OUI" | "NON" | "HORS CONTRAT",
 };
 
 export default function TicketDialog({ open, onOpenChange, ticketId, defaultScheduledAt, onSaved }: Props) {
@@ -49,6 +53,8 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
   const [ticket, setTicket] = useState<any>(null);
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [newContact, setNewContact] = useState({ nom: "", telephone: "", teamviewer_id: "", fonction: "" });
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
 
   const client = useMemo(() => clients.find((c) => c.id === form.client_id), [clients, form.client_id]);
   const contactsForClient = useMemo(
@@ -61,7 +67,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     (async () => {
       const [c, cc] = await Promise.all([
         supabase.from("clients").select("*").order("entreprise").limit(5000),
-        supabase.from("client_contacts").select("*").order("nom").limit(10000),
+        supabase.from("client_contacts").select("*").order("nom").limit(20000),
       ]);
       setClients(c.data ?? []);
       setContacts(cc.data ?? []);
@@ -98,6 +104,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
         statut: data.statut,
         description: data.description ?? "",
         compte_rendu: data.compte_rendu ?? "",
+        hotline_override: (data as any).hotline_override ?? "",
         scheduled_at: data.scheduled_at
           ? format(new Date(data.scheduled_at), "yyyy-MM-dd'T'HH:mm")
           : data.date_ouverture
@@ -120,6 +127,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
       telephone_client: primary?.telephone ?? c?.telephone ?? "",
       teamviewer_id: primary?.teamviewer_id ?? c?.teamviewer_id ?? "",
     });
+    setClientPickerOpen(false);
   };
 
   const chooseContact = (contactId: string) => {
@@ -131,19 +139,21 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
       telephone_client: ct?.telephone ?? form.telephone_client,
       teamviewer_id: ct?.teamviewer_id ?? form.teamviewer_id,
     });
+    setContactPickerOpen(false);
   };
 
   const createContact = async () => {
-    if (!form.client_id) return toast.error("Sélectionnez d'abord un client");
-    if (!newContact.nom.trim()) return toast.error("Nom du contact requis");
+    if (!form.client_id) return toast.error("Sélectionnez d'abord un client existant pour créer un contact persistant");
+    const nom = normalizeContactName(newContact.nom);
+    if (!nom) return toast.error("Nom du contact requis");
     const { data, error } = await supabase
       .from("client_contacts")
       .insert({
         client_id: form.client_id,
-        nom: newContact.nom.trim(),
-        telephone: newContact.telephone || null,
-        teamviewer_id: newContact.teamviewer_id || null,
-        fonction: newContact.fonction || null,
+        nom,
+        telephone: cleanText(newContact.telephone) || null,
+        teamviewer_id: cleanText(newContact.teamviewer_id) || null,
+        fonction: cleanText(newContact.fonction) || null,
         is_primary: false,
       })
       .select()
@@ -153,19 +163,48 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     chooseContact(data.id);
     setNewContact({ nom: "", telephone: "", teamviewer_id: "", fonction: "" });
     setNewContactOpen(false);
-    toast.success("Contact ajouté");
+    toast.success(`Contact "${nom}" enregistré dans la base`);
+  };
+
+  const persistAdHocContact = async () => {
+    // Si un nom de contact a été tapé manuellement (pas via la liste) et qu'un client existe en base,
+    // on le persiste pour les futurs tickets.
+    const nom = normalizeContactName(form.contact_client);
+    if (!nom || !form.client_id) return null;
+    const exists = contactsForClient.find((c) => c.nom.toLowerCase() === nom.toLowerCase());
+    if (exists) return exists.id;
+    const { data, error } = await supabase
+      .from("client_contacts")
+      .insert({
+        client_id: form.client_id,
+        nom,
+        telephone: cleanText(form.telephone_client) || null,
+        teamviewer_id: cleanText(form.teamviewer_id) || null,
+        is_primary: false,
+      })
+      .select()
+      .single();
+    if (error) {
+      console.warn("persist contact failed", error);
+      return null;
+    }
+    setContacts([...contacts, data]);
+    return data.id;
   };
 
   const save = async () => {
-    if (!form.client_id || !form.client_nom) return toast.error("Sélectionnez un client");
+    if (!form.client_nom?.trim()) return toast.error("Saisissez un nom de client");
 
-    const horsContrat =
-      !client ||
-      hotlineRight(client.contract_type, client.date_echeance_hotline) !== "OUI";
+    // Calcul du droit hotline final (override prioritaire)
+    const calcDroit = client
+      ? hotlineRight(client.contract_type, client.date_echeance_hotline, client.date_echeance_maintenance)
+      : "HORS CONTRAT";
+    const droitFinal = form.hotline_override || calcDroit;
+    const horsContrat = droitFinal !== "OUI";
 
     const scheduled = form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null;
 
-    // Si le contact a un nouveau TeamViewer, on le mémorise sur le contact
+    // Mémorise un nouveau TV sur le contact existant
     if (form.contact_id && form.teamviewer_id) {
       const ct = contacts.find((x) => x.id === form.contact_id);
       if (ct && ct.teamviewer_id !== form.teamviewer_id) {
@@ -173,22 +212,29 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
       }
     }
 
+    // Persiste un contact saisi à la volée
+    let contactId = form.contact_id || null;
+    if (!contactId && form.contact_client) {
+      contactId = await persistAdHocContact();
+    }
+
     const payload: any = {
-      client_id: form.client_id,
-      client_nom: form.client_nom,
-      contact_id: form.contact_id || null,
-      contact_client: form.contact_client || null,
-      telephone_client: form.telephone_client || null,
-      teamviewer_id: form.teamviewer_id || null,
+      client_id: form.client_id || null,
+      client_nom: cleanText(form.client_nom),
+      contact_id: contactId,
+      contact_client: normalizeContactName(form.contact_client) || null,
+      telephone_client: cleanText(form.telephone_client) || null,
+      teamviewer_id: cleanText(form.teamviewer_id) || null,
       teamviewer_password: form.teamviewer_password || null,
       motif: form.motif,
-      motif_detail: form.motif_detail || null,
+      motif_detail: cleanText(form.motif_detail) || null,
       priorite: form.priorite,
       statut: form.statut,
       description: form.description || null,
       compte_rendu: form.compte_rendu || null,
       scheduled_at: scheduled,
       hors_contrat: horsContrat,
+      hotline_override: form.hotline_override || null,
     };
 
     let res;
@@ -207,7 +253,10 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     onSaved?.();
   };
 
-  const right = client ? hotlineRight(client.contract_type, client.date_echeance_hotline) : null;
+  const calcDroit = client
+    ? hotlineRight(client.contract_type, client.date_echeance_hotline, client.date_echeance_maintenance)
+    : "HORS CONTRAT";
+  const droitAffiche = form.hotline_override || calcDroit;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -219,24 +268,50 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Client */}
+          {/* Client : recherche + saisie libre */}
           <div>
             <Label>Client</Label>
-            <Select value={form.client_id} onValueChange={chooseClient}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner un client..." /></SelectTrigger>
-              <SelectContent>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.entreprise}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="flex-1 justify-between">
+                    {form.client_nom || "Rechercher un client..."}
+                    <ChevronsUpDown className="opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[420px]" align="start">
+                  <Command>
+                    <CommandInput placeholder="Tapez le nom du client..." />
+                    <CommandList>
+                      <CommandEmpty>Aucun client trouvé. Vous pouvez saisir un nom libre ci-dessous.</CommandEmpty>
+                      <CommandGroup>
+                        {clients.slice(0, 200).map((c) => (
+                          <CommandItem key={c.id} value={c.entreprise} onSelect={() => chooseClient(c.id)}>
+                            <Check className={cn("mr-2 h-4 w-4", form.client_id === c.id ? "opacity-100" : "opacity-0")} />
+                            {c.entreprise}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Input
+              className="mt-2"
+              placeholder="Nom du client (modifiable)"
+              value={form.client_nom}
+              onChange={(e) => setForm({ ...form, client_nom: e.target.value })}
+            />
             {client && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                {right === "OUI" && <Badge className="bg-success text-success-foreground">HOTLINE</Badge>}
+                {droitAffiche === "OUI" && <Badge className="bg-success text-success-foreground">HOTLINE OUI</Badge>}
+                {droitAffiche === "NON" && <Badge variant="secondary">HOTLINE NON</Badge>}
+                {droitAffiche === "HORS CONTRAT" && <Badge variant="destructive">HORS CONTRAT</Badge>}
+                {form.hotline_override && <Badge variant="outline">Forcé manuellement</Badge>}
                 {(client.contract_type === "maintenance" || client.contract_type === "maintenance_hotline") && (
                   <Badge variant="secondary">MAINTENANCE</Badge>
                 )}
-                {right === "HORS CONTRAT" && <Badge variant="destructive">HORS CONTRAT</Badge>}
                 {client.date_echeance_hotline && (
                   <span className="text-xs text-muted-foreground">
                     Hotline jusqu'au {format(new Date(client.date_echeance_hotline), "dd MMM yyyy", { locale: fr })}
@@ -265,25 +340,44 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
                 <UserPlus className="w-3 h-3" /> Nouveau contact
               </Button>
             </div>
-            <Select value={form.contact_id} onValueChange={chooseContact} disabled={!form.client_id}>
-              <SelectTrigger><SelectValue placeholder="Choisir un contact..." /></SelectTrigger>
-              <SelectContent>
-                {contactsForClient.map((ct) => (
-                  <SelectItem key={ct.id} value={ct.id}>
-                    {ct.nom}{ct.fonction ? ` — ${ct.fonction}` : ""}
-                  </SelectItem>
-                ))}
-                {contactsForClient.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">Aucun contact enregistré</div>
-                )}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Popover open={contactPickerOpen} onOpenChange={setContactPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="flex-1 justify-between" disabled={!form.client_id}>
+                    {form.contact_client || "Choisir un contact..."}
+                    <ChevronsUpDown className="opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[420px]" align="start">
+                  <Command>
+                    <CommandInput placeholder="Rechercher un contact..." />
+                    <CommandList>
+                      <CommandEmpty>Aucun contact. Tapez un nom dans le champ ci-dessous, il sera enregistré.</CommandEmpty>
+                      <CommandGroup>
+                        {contactsForClient.map((ct) => (
+                          <CommandItem key={ct.id} value={ct.nom} onSelect={() => chooseContact(ct.id)}>
+                            <Check className={cn("mr-2 h-4 w-4", form.contact_id === ct.id ? "opacity-100" : "opacity-0")} />
+                            {ct.nom}{ct.fonction ? ` — ${ct.fonction}` : ""}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Input
+              className="mt-2"
+              placeholder="Nom du contact (sera enregistré automatiquement)"
+              value={form.contact_client}
+              onChange={(e) => setForm({ ...form, contact_client: e.target.value, contact_id: "" })}
+            />
 
             {newContactOpen && (
               <div className="mt-2 p-3 border rounded-lg bg-accent/30 grid grid-cols-2 gap-2">
                 <div className="col-span-2">
                   <Label className="text-xs">Nom *</Label>
-                  <Input value={newContact.nom} onChange={(e) => setNewContact({ ...newContact, nom: e.target.value })} />
+                  <Input value={newContact.nom} onChange={(e) => setNewContact({ ...newContact, nom: e.target.value })} placeholder="ex: jean dupont → Jean DUPONT" />
                 </div>
                 <div>
                   <Label className="text-xs">Fonction</Label>
@@ -298,7 +392,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
                   <Input value={newContact.teamviewer_id} onChange={(e) => setNewContact({ ...newContact, teamviewer_id: e.target.value })} />
                 </div>
                 <div className="col-span-2 flex gap-2">
-                  <Button size="sm" onClick={createContact}><Plus className="w-3 h-3" /> Ajouter</Button>
+                  <Button size="sm" onClick={createContact}><Plus className="w-3 h-3" /> Enregistrer dans la base</Button>
                   <Button size="sm" variant="ghost" onClick={() => setNewContactOpen(false)}>Annuler</Button>
                 </div>
               </div>
@@ -370,6 +464,26 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
             </div>
           </div>
 
+          {/* Droit Hotline : auto + override */}
+          <div>
+            <Label>Droit Hot-line</Label>
+            <Select
+              value={form.hotline_override || "auto"}
+              onValueChange={(v) => setForm({ ...form, hotline_override: v === "auto" ? "" : v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto ({calcDroit})</SelectItem>
+                <SelectItem value="OUI">Forcer OUI</SelectItem>
+                <SelectItem value="NON">Forcer NON</SelectItem>
+                <SelectItem value="HORS CONTRAT">Forcer HORS CONTRAT</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Auto = calculé depuis le contrat client. Choisir une valeur pour forcer manuellement.
+            </p>
+          </div>
+
           <div><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <div><Label>Compte rendu</Label><Textarea rows={3} value={form.compte_rendu} onChange={(e) => setForm({ ...form, compte_rendu: e.target.value })} /></div>
 
@@ -391,6 +505,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     date_ouverture: ticket?.date_ouverture,
     heure_debut_effectif: ticket?.heure_debut_effectif,
     heure_fin_effectif: ticket?.heure_fin_effectif,
+    hotline_override: form.hotline_override,
   } as any,
   client,
 )}
