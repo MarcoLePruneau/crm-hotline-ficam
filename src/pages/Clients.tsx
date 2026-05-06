@@ -4,27 +4,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
-import { Upload, Plus, Search, AlertTriangle, Trash2, Edit2, Monitor, FileSpreadsheet } from "lucide-react";
-import { CONTRACT_TYPES, ContractType } from "@/lib/constants";
+import { Upload, Plus, Search, AlertTriangle, Trash2, Edit2, Monitor, Users, FileText, UserPlus } from "lucide-react";
+import { CLIENT_FILTER_TYPES, CONTRACT_TYPES, ContractType, HOTLINE_ELIGIBLE_TYPES } from "@/lib/constants";
 import { contractLabel } from "@/lib/ficam";
 import { getContractStatus } from "@/lib/contractStatus";
-import { format, addYears } from "date-fns";
+import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 const empty = {
   entreprise: "", contact_nom: "", contact_fonction: "", telephone: "", email: "",
-  ville: "", numero_serie_mastercam: "", teamviewer_id: "", contract_type: "hors_contrat" as ContractType,
+  ville: "", adresse: "", code_postal: "", numero_serie_mastercam: "", teamviewer_id: "",
+  contract_type: "hors_contrat" as ContractType,
   date_echeance_maintenance: "", date_echeance_hotline: "", notes: "",
 };
 
-const clean = (v: unknown) => String(v ?? "").trim().replace(/\s+/g, " ");
-const norm = (v: unknown) => clean(v).toUpperCase();
+const norm = (v: unknown) => String(v ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+const clean = (v: unknown) => { const s = String(v ?? "").trim().replace(/\s+/g, " "); return s || null; };
+const upperName = (v: unknown) => { const s = clean(v); return s ? s.toUpperCase() : null; };
+const titleName = (v: unknown) => { const s = clean(v); return s ? s[0].toUpperCase() + s.slice(1).toLowerCase() : null; };
 const toIsoDate = (v: unknown) => {
   if (!v) return null;
   if (v instanceof Date && !Number.isNaN(v.getTime())) return v.toISOString().slice(0, 10);
@@ -32,10 +35,6 @@ const toIsoDate = (v: unknown) => {
   if (asNum) return new Date(asNum.y, asNum.m - 1, asNum.d).toISOString().slice(0, 10);
   const d = new Date(String(v));
   return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
-};
-const expiryFromOrder = (v: unknown) => {
-  const iso = toIsoDate(v);
-  return iso ? addYears(new Date(iso), 1).toISOString().slice(0, 10) : null;
 };
 const rowsFromFile = async (file: File) => {
   const buf = await file.arrayBuffer();
@@ -50,8 +49,13 @@ export default function Clients() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>(empty);
   const [editId, setEditId] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const ficamFileRef = useRef<HTMLInputElement>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailContacts, setDetailContacts] = useState<any[]>([]);
+  const [detailContracts, setDetailContracts] = useState<any[]>([]);
+  const [newContact, setNewContact] = useState({ nom: "", fonction: "", telephone: "", email: "" });
+  const clientsFileRef = useRef<HTMLInputElement>(null);
+  const contactsFileRef = useRef<HTMLInputElement>(null);
+  const contractsFileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     const { data } = await supabase.from("clients").select("*").order("entreprise");
@@ -63,7 +67,7 @@ export default function Clients() {
     if (filter !== "all" && c.contract_type !== filter) return false;
     if (!search) return true;
     const q = search.toLowerCase();
-    return [c.entreprise, c.contact_nom, c.email, c.telephone, c.numero_serie_mastercam, c.teamviewer_id]
+    return [c.entreprise, c.contact_nom, c.email, c.telephone, c.ville, c.numero_serie_mastercam, c.teamviewer_id]
       .some((v) => v?.toLowerCase().includes(q));
   });
 
@@ -71,6 +75,7 @@ export default function Clients() {
     if (!form.entreprise) return toast.error("L'entreprise est obligatoire");
     const payload = {
       ...form,
+      external_ref: norm(form.entreprise),
       date_echeance_maintenance: form.date_echeance_maintenance || null,
       date_echeance_hotline: form.date_echeance_hotline || null,
       teamviewer_id: form.teamviewer_id || null,
@@ -84,114 +89,118 @@ export default function Clients() {
   };
 
   const editClient = (c: any) => {
-    setForm({
-      ...empty, ...c,
-      date_echeance_maintenance: c.date_echeance_maintenance ?? "",
-      date_echeance_hotline: c.date_echeance_hotline ?? "",
-      teamviewer_id: c.teamviewer_id ?? "",
-    });
-    setEditId(c.id);
-    setOpen(true);
+    setForm({ ...empty, ...c, date_echeance_maintenance: c.date_echeance_maintenance ?? "", date_echeance_hotline: c.date_echeance_hotline ?? "", teamviewer_id: c.teamviewer_id ?? "" });
+    setEditId(c.id); setOpen(true);
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Supprimer ce client ?")) return;
+    if (!confirm("Supprimer ce client ? (Cascade : contrats supprimés)")) return;
+    await supabase.from("contracts").delete().eq("client_id", id);
+    await supabase.from("client_contacts").delete().eq("client_id", id);
     const { error } = await supabase.from("clients").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Client supprimé"); load();
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const rows = await rowsFromFile(file);
-    const mapped = rows.map((r) => ({
-      entreprise: clean(r.entreprise || r.Entreprise || r.Société || r["Nom du Client "] || r.Nom),
-      contact_nom: clean(r.contact_nom || r.Contact || r["Contact client"]) || null,
-      telephone: clean(r.telephone || r.Téléphone || r.Tel || r.Standard) || null,
-      email: clean(r.email || r.Email) || null,
-      ville: clean(r.ville || r.Ville) || null,
-      numero_serie_mastercam: clean(r.numero_serie_mastercam || r["N° série"] || r["N° de série"] || r.SN) || null,
-      teamviewer_id: clean(r.teamviewer_id || r.TeamViewer || r["ID TeamViewer"] || r["ID teamviewer"]) || null,
-      contract_type: (r.contract_type || "hors_contrat") as ContractType,
-      date_echeance_maintenance: toIsoDate(r.date_echeance_maintenance || r["Date Maintenance"] || r["Échéance maintenance"]),
-      notes: clean(r.notes || r.Notes) || null,
-    })).filter((r) => r.entreprise);
+  // ===== Vue détaillée =====
+  const openDetail = async (id: string) => {
+    setDetailId(id);
+    const [{ data: cts }, { data: ctr }] = await Promise.all([
+      supabase.from("client_contacts").select("*").eq("client_id", id).order("nom"),
+      supabase.from("contracts").select("*").eq("client_id", id).order("date_commande", { ascending: false }),
+    ]);
+    setDetailContacts(cts ?? []);
+    setDetailContracts(ctr ?? []);
+  };
+  const detailClient = clients.find((c) => c.id === detailId);
 
-    if (!mapped.length) { toast.error("Aucune ligne valide"); return; }
-    const { error } = await supabase.from("clients").insert(mapped);
+  const addContactInDetail = async () => {
+    if (!detailId || !newContact.nom.trim()) return toast.error("Nom du contact requis");
+    const payload = {
+      client_id: detailId,
+      nom: [upperName(newContact.nom.split(" ")[0]), titleName(newContact.nom.split(" ").slice(1).join(" "))].filter(Boolean).join(" ") || newContact.nom,
+      fonction: newContact.fonction || null,
+      telephone: newContact.telephone || null,
+      email: newContact.email || null,
+    };
+    const { data, error } = await supabase.from("client_contacts").insert(payload).select().single();
     if (error) return toast.error(error.message);
-    toast.success(`${mapped.length} clients importés`);
-    load();
-    if (fileRef.current) fileRef.current.value = "";
+    setDetailContacts([...detailContacts, data]);
+    setNewContact({ nom: "", fonction: "", telephone: "", email: "" });
+    toast.success("Contact ajouté — disponible immédiatement dans les tickets");
   };
 
-  const handleFicamImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length < 4) return toast.error("Sélectionnez les 4 fichiers : clients, contacts, maintenance et hotline.");
-    const byName = (needle: string) => files.find((f) => f.name.toLowerCase().includes(needle));
-    const clientsFile = byName("client") && !byName("contact") ? byName("client") : files.find((f) => f.name.toLowerCase().includes("clients"));
-    const contactsFile = byName("contact");
-    const maintenanceFile = byName("maintenance");
-    const hotlineFile = byName("hotline") || byName("hot-line");
-    if (!clientsFile || !contactsFile || !maintenanceFile || !hotlineFile) return toast.error("Fichiers non reconnus. Vérifiez les noms : clients, contact_client, contrat_de_maintenance, contrat_hotline.");
-
-    const [clientRows, contactRows, maintenanceRows, hotlineRows] = await Promise.all([
-      rowsFromFile(clientsFile), rowsFromFile(contactsFile), rowsFromFile(maintenanceFile), rowsFromFile(hotlineFile),
-    ]);
-
-    const contacts = new Map<string, any[]>();
-    contactRows.forEach((r) => {
-      const key = norm(r.Client);
-      if (!key) return;
-      const item = { nom: clean(`${clean(r.Prénom)} ${clean(r.Nom)}`), telephone: clean(r["Ligne directe"] || r.Standard), fax: clean(r.Fax) };
-      contacts.set(key, [...(contacts.get(key) ?? []), item]);
-    });
-
-    const maintenance = new Map<string, string>();
-    maintenanceRows.forEach((r) => {
-      const key = norm(r["Nom du Client "] || r["Nom du Client"]);
-      const d = expiryFromOrder(r["Date Commande"]);
-      if (key && d && (!maintenance.get(key) || d > maintenance.get(key)!)) maintenance.set(key, d);
-    });
-    const hotline = new Map<string, string>();
-    hotlineRows.forEach((r) => {
-      const key = norm(r["Nom du Client "] || r["Nom du Client"]);
-      const d = expiryFromOrder(r["Date Commande"]);
-      if (key && d && (!hotline.get(key) || d > hotline.get(key)!)) hotline.set(key, d);
-    });
-
-    const existing = new Set(clients.map((c) => norm(c.entreprise)));
-    const mapped = clientRows.map((r) => {
-      const entreprise = clean(r["Nom du Client "] || r["Nom du Client"]);
-      const key = norm(entreprise);
-      const list = contacts.get(key) ?? [];
-      const main = list[0] ?? {};
-      const hasMaintenance = maintenance.has(key);
-      const hasHotline = hotline.has(key);
-      const contract_type = (hasMaintenance && hasHotline ? "maintenance_hotline" : hasMaintenance ? "maintenance" : hasHotline ? "hotline" : "hors_contrat") as ContractType;
+  // ===== Imports Excel : 3 boutons (Clients, Contacts, Contrats) avec UPSERT =====
+  const importClients = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const rows = await rowsFromFile(file);
+    const mapped = rows.map((r) => {
+      const entreprise = clean(r["Nom du Client "] || r["Nom du Client"] || r.entreprise || r.Nom);
+      if (!entreprise) return null;
       return {
-        entreprise,
-        contact_nom: main.nom || null,
-        telephone: main.telephone || clean(r.Standard) || null,
-        adresse: clean(r.Adresse) || null,
-        code_postal: clean(r["Code postal"]) || null,
-        ville: clean(r.Ville) || null,
-        contract_type,
-        date_echeance_maintenance: maintenance.get(key) ?? null,
-        date_echeance_hotline: hotline.get(key) ?? null,
-        extra_contacts: list,
-        notes: `Import FICAM — État: ${clean(r.Etat) || "N/A"} — Mastercam: ${clean(r.Mastercam) || "N/A"} — Commercial: ${clean(r.Commercial) || "N/A"}`,
-        external_ref: key,
+        entreprise, external_ref: norm(entreprise),
+        adresse: clean(r.Adresse), code_postal: clean(r["Code postal"]), ville: clean(r.Ville),
+        telephone: clean(r.Standard || r.Téléphone), date_echeance_hotline: toIsoDate(r["Fin de Hotline"]),
+        notes: `Commercial: ${clean(r.Commercial) || "—"} | Mastercam: ${clean(r.Mastercam) || "—"}`,
       };
-    }).filter((r) => r.entreprise && !existing.has(norm(r.entreprise)));
-
-    if (!mapped.length) { toast.info("Aucun nouveau client à importer."); return; }
-    const { error } = await supabase.from("clients").insert(mapped);
+    }).filter(Boolean) as any[];
+    if (!mapped.length) return toast.error("Aucune ligne valide");
+    const { error } = await supabase.from("clients").upsert(mapped, { onConflict: "external_ref" });
     if (error) return toast.error(error.message);
-    toast.success(`${mapped.length} clients FICAM importés et consolidés`);
-    load();
-    if (ficamFileRef.current) ficamFileRef.current.value = "";
+    toast.success(`${mapped.length} clients importés (fusion sur le nom)`);
+    load(); if (clientsFileRef.current) clientsFileRef.current.value = "";
+  };
+
+  const importContacts = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const rows = await rowsFromFile(file);
+    const { data: cs } = await supabase.from("clients").select("id, external_ref");
+    const map = new Map<string, string>(); (cs ?? []).forEach((c: any) => c.external_ref && map.set(c.external_ref, c.id));
+    const mapped = rows.map((r) => {
+      const ext = norm(r.Client);
+      const id = map.get(ext); if (!id) return null;
+      const nom = [upperName(r.Nom), titleName(r.Prénom)].filter(Boolean).join(" ");
+      if (!nom) return null;
+      return {
+        client_id: id, nom,
+        fonction: clean(r.Fonction || r.Qualité),
+        telephone: clean(r["Ligne directe"] || r.Portable || r.Standard),
+        email: clean(r["E-mail"]),
+      };
+    }).filter(Boolean) as any[];
+    if (!mapped.length) return toast.error("Aucun contact rattaché à un client connu");
+    const { error } = await supabase.from("client_contacts").insert(mapped);
+    if (error) return toast.error(error.message);
+    toast.success(`${mapped.length} contacts importés`);
+    if (contactsFileRef.current) contactsFileRef.current.value = "";
+  };
+
+  const importContracts = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const rows = await rowsFromFile(file);
+    const { data: cs } = await supabase.from("clients").select("id, external_ref");
+    const map = new Map<string, string>(); (cs ?? []).forEach((c: any) => c.external_ref && map.set(c.external_ref, c.id));
+    const fname = file.name.toLowerCase();
+    const type = fname.includes("hotline") ? "hotline" : fname.includes("maintenance") ? "maintenance" : fname.includes("souscription") ? "souscription" : "autre";
+    const mapped = rows.map((r) => {
+      const nom = clean(r["Nom du Client "] || r["Nom du Client"]); if (!nom) return null;
+      const ext = norm(nom);
+      return {
+        client_id: map.get(ext) || null, client_nom: nom, external_ref: ext,
+        numero_commande: clean(r["Numéro de commande"]),
+        date_commande: toIsoDate(r["Date Commande"]),
+        type_abonnement: type,
+        affaire: clean(r.Affaire || r["Type d'abonnement"]),
+        date_debut: toIsoDate(r["Date Début"]),
+        date_fin: toIsoDate(r["Date Fin"]),
+        source_file: file.name,
+      };
+    }).filter(Boolean) as any[];
+    if (!mapped.length) return toast.error("Aucune ligne valide");
+    const { error } = await supabase.from("contracts").insert(mapped);
+    if (error) return toast.error(error.message);
+    toast.success(`${mapped.length} contrats importés (${type})`);
+    if (contractsFileRef.current) contractsFileRef.current.value = "";
   };
 
   return (
@@ -199,47 +208,24 @@ export default function Clients() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
-          <p className="text-muted-foreground">{clients.length} clients en base</p>
+          <p className="text-muted-foreground">{clients.length} clients en base — croisement automatique par nom</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <input ref={ficamFileRef} type="file" accept=".xlsx,.xls,.csv" multiple className="hidden" onChange={handleFicamImport} />
-          <Button variant="outline" onClick={() => ficamFileRef.current?.click()}>
-            <FileSpreadsheet className="w-4 h-4" /> Import FICAM 4 fichiers
+          <input ref={clientsFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={importClients} />
+          <Button variant="outline" onClick={() => clientsFileRef.current?.click()}>
+            <Users className="w-4 h-4" /> Import Clients
           </Button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
-            <Upload className="w-4 h-4" /> Import simple
+          <input ref={contactsFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={importContacts} />
+          <Button variant="outline" onClick={() => contactsFileRef.current?.click()}>
+            <UserPlus className="w-4 h-4" /> Import Contacts
           </Button>
-          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setForm(empty); setEditId(null); } }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="w-4 h-4" /> Nouveau client</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>{editId ? "Modifier client" : "Nouveau client"}</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2"><Label>Entreprise *</Label><Input value={form.entreprise} onChange={(e) => setForm({ ...form, entreprise: e.target.value })} /></div>
-                <div><Label>Contact</Label><Input value={form.contact_nom} onChange={(e) => setForm({ ...form, contact_nom: e.target.value })} /></div>
-                <div><Label>Fonction</Label><Input value={form.contact_fonction} onChange={(e) => setForm({ ...form, contact_fonction: e.target.value })} /></div>
-                <div><Label>Téléphone</Label><Input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
-                <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                <div><Label>Ville</Label><Input value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} /></div>
-                <div><Label>N° série Mastercam</Label><Input value={form.numero_serie_mastercam} onChange={(e) => setForm({ ...form, numero_serie_mastercam: e.target.value })} /></div>
-                <div><Label>ID TeamViewer</Label><Input value={form.teamviewer_id} onChange={(e) => setForm({ ...form, teamviewer_id: e.target.value })} /></div>
-                <div className="col-span-2"><Label>Type de contrat</Label>
-                  <Select value={form.contract_type} onValueChange={(v) => setForm({ ...form, contract_type: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(CONTRACT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Échéance maintenance</Label><Input type="date" value={form.date_echeance_maintenance} onChange={(e) => setForm({ ...form, date_echeance_maintenance: e.target.value })} /></div>
-                <div><Label>Échéance hotline</Label><Input type="date" value={form.date_echeance_hotline} onChange={(e) => setForm({ ...form, date_echeance_hotline: e.target.value })} /></div>
-                <div className="col-span-2"><Label>Notes</Label><Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-              </div>
-              <Button onClick={submit} className="w-full">{editId ? "Enregistrer" : "Créer"}</Button>
-            </DialogContent>
-          </Dialog>
+          <input ref={contractsFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={importContracts} />
+          <Button variant="outline" onClick={() => contractsFileRef.current?.click()}>
+            <FileText className="w-4 h-4" /> Import Contrats
+          </Button>
+          <Button onClick={() => { setForm(empty); setEditId(null); setOpen(true); }}>
+            <Plus className="w-4 h-4" /> Nouveau client
+          </Button>
         </div>
       </div>
 
@@ -248,13 +234,13 @@ export default function Clients() {
           <div className="flex flex-wrap gap-3">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Rechercher entreprise, contact, téléphone, TeamViewer..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              <Input className="pl-9" placeholder="Rechercher entreprise, contact, téléphone…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les contrats</SelectItem>
-                {Object.entries(CONTRACT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                {Object.entries(CLIENT_FILTER_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -266,27 +252,22 @@ export default function Clients() {
                   <th className="px-4 py-2 font-medium">Entreprise</th>
                   <th className="px-4 py-2 font-medium">Contact</th>
                   <th className="px-4 py-2 font-medium">Contrat</th>
-                  <th className="px-4 py-2 font-medium">Échéance maintenance</th>
-                  <th className="px-4 py-2 font-medium">TeamViewer</th>
-                  <th className="px-4 py-2 font-medium">N° série</th>
+                  <th className="px-4 py-2 font-medium">Échéance</th>
+                  <th className="px-4 py-2 font-medium">Ville</th>
                   <th className="px-4 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.slice(0, 500).map((c) => {
-                  const s = getContractStatus(c.date_echeance_maintenance);
-                  const horsContrat = c.contract_type === "hors_contrat" || c.contract_type === "maintenance";
+                  const s = getContractStatus(c.date_echeance_maintenance ?? c.date_echeance_hotline);
+                  const horsContrat = !(HOTLINE_ELIGIBLE_TYPES as readonly string[]).includes(c.contract_type);
                   return (
-                    <tr key={c.id} className={
-                      "border-b hover:bg-accent/50 " +
-                      (s === "expired" ? "text-destructive font-semibold" : s === "expiring" ? "text-warning" : "")
-                    }>
+                    <tr key={c.id} className={"border-b hover:bg-accent/50 cursor-pointer " + (s === "expired" ? "text-destructive font-semibold" : s === "expiring" ? "text-warning" : "")} onClick={() => openDetail(c.id)}>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           {c.entreprise}
                           {horsContrat && <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3" /> Facturable</Badge>}
                         </div>
-                        {c.ville && <div className="text-xs text-muted-foreground font-normal">{c.ville}</div>}
                       </td>
                       <td className="px-4 py-2">
                         <div>{c.contact_nom || "—"}</div>
@@ -294,14 +275,11 @@ export default function Clients() {
                       </td>
                       <td className="px-4 py-2"><Badge variant="outline">{contractLabel(c.contract_type)}</Badge></td>
                       <td className="px-4 py-2">
-                        {c.date_echeance_maintenance ? format(new Date(c.date_echeance_maintenance), "dd MMM yyyy", { locale: fr }) : "—"}
+                        {c.date_echeance_hotline ? format(new Date(c.date_echeance_hotline), "dd MMM yyyy", { locale: fr }) : "—"}
                       </td>
-                      <td className="px-4 py-2 font-mono text-xs">
-                        {c.teamviewer_id ? <span className="inline-flex items-center gap-1"><Monitor className="w-3 h-3" />{c.teamviewer_id}</span> : "—"}
-                      </td>
-                      <td className="px-4 py-2 font-mono text-xs">{c.numero_serie_mastercam || "—"}</td>
+                      <td className="px-4 py-2">{c.ville || "—"}</td>
                       <td className="px-4 py-2">
-                        <div className="flex gap-1 justify-end">
+                        <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
                           <Button size="icon" variant="ghost" onClick={() => editClient(c)}><Edit2 className="w-4 h-4" /></Button>
                           <Button size="icon" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="w-4 h-4" /></Button>
                         </div>
@@ -309,15 +287,103 @@ export default function Clients() {
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">Aucun client</td></tr>
-                )}
+                {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">Aucun client</td></tr>}
               </tbody>
             </table>
           </div>
           {filtered.length > 500 && <p className="text-xs text-muted-foreground text-center">Affichage limité à 500 lignes — affinez la recherche.</p>}
         </CardContent>
       </Card>
+
+      {/* Édition / création */}
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setForm(empty); setEditId(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editId ? "Modifier client" : "Nouveau client"}</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><Label>Entreprise *</Label><Input value={form.entreprise} onChange={(e) => setForm({ ...form, entreprise: e.target.value })} /></div>
+            <div><Label>Adresse</Label><Input value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} /></div>
+            <div><Label>Code postal</Label><Input value={form.code_postal} onChange={(e) => setForm({ ...form, code_postal: e.target.value })} /></div>
+            <div><Label>Ville</Label><Input value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} /></div>
+            <div><Label>Téléphone</Label><Input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
+            <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+            <div><Label>ID TeamViewer</Label><Input value={form.teamviewer_id} onChange={(e) => setForm({ ...form, teamviewer_id: e.target.value })} /></div>
+            <div className="col-span-2"><Label>Type de contrat</Label>
+              <Select value={form.contract_type} onValueChange={(v) => setForm({ ...form, contract_type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{Object.entries(CONTRACT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Échéance maintenance</Label><Input type="date" value={form.date_echeance_maintenance} onChange={(e) => setForm({ ...form, date_echeance_maintenance: e.target.value })} /></div>
+            <div><Label>Échéance hotline</Label><Input type="date" value={form.date_echeance_hotline} onChange={(e) => setForm({ ...form, date_echeance_hotline: e.target.value })} /></div>
+            <div className="col-span-2"><Label>Notes</Label><Textarea rows={3} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          </div>
+          <Button onClick={submit} className="w-full">{editId ? "Enregistrer" : "Créer"}</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Vue fiche détaillée */}
+      <Dialog open={!!detailId} onOpenChange={(o) => { if (!o) { setDetailId(null); setDetailContacts([]); setDetailContracts([]); } }}>
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{detailClient?.entreprise}</DialogTitle></DialogHeader>
+          {detailClient && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-muted-foreground">Adresse :</span> {[detailClient.adresse, detailClient.code_postal, detailClient.ville].filter(Boolean).join(", ") || "—"}</div>
+                <div><span className="text-muted-foreground">Téléphone :</span> {detailClient.telephone || "—"}</div>
+                <div><span className="text-muted-foreground">Type de contrat :</span> <Badge variant="outline">{contractLabel(detailClient.contract_type)}</Badge></div>
+                <div><span className="text-muted-foreground">TeamViewer :</span> <span className="font-mono">{detailClient.teamviewer_id || "—"}</span></div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2"><Users className="w-4 h-4" /> Contacts ({detailContacts.length})</h3>
+                <div className="space-y-1.5 max-h-60 overflow-auto border rounded-lg p-2">
+                  {detailContacts.length === 0 && <p className="text-xs text-muted-foreground p-2">Aucun contact enregistré</p>}
+                  {detailContacts.map((ct) => (
+                    <div key={ct.id} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-accent/40 text-sm">
+                      <span className="font-medium">{ct.nom}</span>
+                      {ct.fonction && <span className="text-xs text-muted-foreground">— {ct.fonction}</span>}
+                      <span className="ml-auto text-xs">{ct.telephone || ct.email || ""}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  <Input placeholder="Nom complet" value={newContact.nom} onChange={(e) => setNewContact({ ...newContact, nom: e.target.value })} />
+                  <Input placeholder="Fonction" value={newContact.fonction} onChange={(e) => setNewContact({ ...newContact, fonction: e.target.value })} />
+                  <Input placeholder="Téléphone" value={newContact.telephone} onChange={(e) => setNewContact({ ...newContact, telephone: e.target.value })} />
+                  <Button onClick={addContactInDetail}><Plus className="w-4 h-4" /> Ajouter</Button>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2"><FileText className="w-4 h-4" /> Historique des contrats ({detailContracts.length})</h3>
+                <div className="space-y-1 max-h-60 overflow-auto border rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50"><tr>
+                      <th className="px-2 py-1 text-left">N° commande</th>
+                      <th className="px-2 py-1 text-left">Type</th>
+                      <th className="px-2 py-1 text-left">Affaire</th>
+                      <th className="px-2 py-1 text-left">Début</th>
+                      <th className="px-2 py-1 text-left">Fin</th>
+                    </tr></thead>
+                    <tbody>
+                      {detailContracts.map((ct) => (
+                        <tr key={ct.id} className="border-t">
+                          <td className="px-2 py-1 font-mono">{ct.numero_commande || "—"}</td>
+                          <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">{ct.type_abonnement}</Badge></td>
+                          <td className="px-2 py-1">{ct.affaire || "—"}</td>
+                          <td className="px-2 py-1">{ct.date_debut ? format(new Date(ct.date_debut), "dd/MM/yyyy") : "—"}</td>
+                          <td className="px-2 py-1">{ct.date_fin ? format(new Date(ct.date_fin), "dd/MM/yyyy") : "—"}</td>
+                        </tr>
+                      ))}
+                      {detailContracts.length === 0 && <tr><td colSpan={5} className="px-2 py-3 text-center text-muted-foreground">Aucun contrat enregistré</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
