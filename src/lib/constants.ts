@@ -17,10 +17,22 @@ export const TECHNICIENS = [
 export const CONTRACT_TYPES = {
   maintenance_hotline: "Maintenance + Hotline",
   hotline: "Hotline seule",
+  souscription: "Souscription",
   maintenance: "Maintenance seule",
   cimco: "Contrat CIMCO",
   hors_contrat: "Hors Contrat",
 } as const;
+
+// Filtres exposés dans l'UI Clients (plus de "Maintenance seule")
+export const CLIENT_FILTER_TYPES = {
+  hotline: "Hotline seul",
+  maintenance_hotline: "Maintenance + Hotline",
+  souscription: "Souscription",
+  hors_contrat: "Hors Contrat",
+} as const;
+
+// Un client a droit à la hotline si l'un de ces contrats est présent
+export const HOTLINE_ELIGIBLE_TYPES = ["hotline", "maintenance_hotline", "souscription", "cimco"] as const;
 
 export const MOTIFS = {
   aide_programmation: "Aide programmation",
