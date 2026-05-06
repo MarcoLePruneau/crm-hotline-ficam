@@ -23,11 +23,12 @@ export const technicianInitials = (name?: string | null) => {
   return TECHNICIAN_INITIALS[name] ?? name.split(/[\s-]+/).filter(Boolean).map((p) => p[0]).join("").slice(0, 3).toUpperCase();
 };
 
+// Règle métier : Hotline OUI si contrat hotline, maintenance+hotline, souscription ou CIMCO.
+// La maintenance seule donne aussi droit à la hotline (règle d'or FICAM).
 export const hotlineRight = (contractType?: ContractType | null, hotlineExpiry?: string | null) => {
-  if (contractType === "hors_contrat") return "HORS CONTRAT";
-  if (contractType === "cimco") return "OUI";
-  if (contractType === "maintenance") return "NON";
-  if (hotlineExpiry && new Date(hotlineExpiry) < new Date()) return "HORS CONTRAT";
+  if (!contractType || contractType === "hors_contrat") return "NON";
+  if (contractType === "maintenance") return "OUI"; // règle d'or : maintenance ⇒ hotline
+  if (hotlineExpiry && new Date(hotlineExpiry) < new Date() && contractType === "hotline") return "HORS CONTRAT";
   return "OUI";
 };
 

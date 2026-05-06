@@ -3,12 +3,28 @@ import { Button } from "@/components/ui/button";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Moon, Sun, Calendar } from "lucide-react";
+import { LogOut, Moon, Sun, Calendar, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Settings() {
   const { technicien, clear } = useTechnician();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+
+  const wipeAll = async () => {
+    if (!confirm("⚠ Étape 1/2 — Supprimer DÉFINITIVEMENT tous les clients, contacts, contrats et tickets ?")) return;
+    const phrase = prompt('Étape 2/2 — Tapez exactement SUPPRIMER pour confirmer :');
+    if (phrase !== "SUPPRIMER") return toast.error("Annulé");
+    const NIL = "00000000-0000-0000-0000-000000000000";
+    await supabase.from("ticket_attachments").delete().neq("id", NIL);
+    await supabase.from("tickets").delete().neq("id", NIL);
+    await supabase.from("contracts").delete().neq("id", NIL);
+    await supabase.from("client_contacts").delete().neq("id", NIL);
+    const { error } = await supabase.from("clients").delete().neq("id", NIL);
+    if (error) return toast.error(error.message);
+    toast.success("Base de données entièrement vidée");
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -19,7 +35,7 @@ export default function Settings() {
 
       <Card>
         <CardHeader><CardTitle>Profil</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-muted-foreground">Connecté en tant que</div>
@@ -54,12 +70,19 @@ export default function Settings() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">
-            Le calendrier partagé <code className="px-1.5 py-0.5 rounded bg-muted">hot-line@ficam.com</code> est actuellement en mode simulation complète.
-          </p>
-          <p className="text-muted-foreground">
-            Les tickets créent déjà des événements simulés au format FICAM, et la page Calendrier permet de tester le flux Outlook → App sans connexion Microsoft Entra ID.
+            Le calendrier partagé <code className="px-1.5 py-0.5 rounded bg-muted">hot-line@ficam.com</code> est en mode simulation.
           </p>
           <Button variant="outline" disabled>Microsoft Graph / Entra ID : à brancher en phase finale</Button>
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="w-5 h-5" /> Zone dangereuse</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">Vide intégralement la base : clients, contacts, contrats, tickets et pièces jointes. Double confirmation requise.</p>
+          <Button variant="destructive" onClick={wipeAll}>Supprimer toute la base de données</Button>
         </CardContent>
       </Card>
     </div>

@@ -181,6 +181,62 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          affaire: string | null
+          client_id: string | null
+          client_nom: string
+          created_at: string
+          date_commande: string | null
+          date_debut: string | null
+          date_fin: string | null
+          external_ref: string | null
+          id: string
+          numero_commande: string | null
+          source_file: string | null
+          type_abonnement: string
+          updated_at: string
+        }
+        Insert: {
+          affaire?: string | null
+          client_id?: string | null
+          client_nom: string
+          created_at?: string
+          date_commande?: string | null
+          date_debut?: string | null
+          date_fin?: string | null
+          external_ref?: string | null
+          id?: string
+          numero_commande?: string | null
+          source_file?: string | null
+          type_abonnement: string
+          updated_at?: string
+        }
+        Update: {
+          affaire?: string | null
+          client_id?: string | null
+          client_nom?: string
+          created_at?: string
+          date_commande?: string | null
+          date_debut?: string | null
+          date_fin?: string | null
+          external_ref?: string | null
+          id?: string
+          numero_commande?: string | null
+          source_file?: string | null
+          type_abonnement?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       direct_messages: {
         Row: {
           content: string | null
@@ -268,6 +324,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          ticket_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          ticket_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          ticket_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_time_logs: {
         Row: {
           created_at: string
@@ -321,6 +418,7 @@ export type Database = {
           heure_debut_effectif: string | null
           heure_fin_effectif: string | null
           hors_contrat: boolean
+          hotline_override: string | null
           id: string
           motif: Database["public"]["Enums"]["ticket_motif"]
           motif_detail: string | null
@@ -353,6 +451,7 @@ export type Database = {
           heure_debut_effectif?: string | null
           heure_fin_effectif?: string | null
           hors_contrat?: boolean
+          hotline_override?: string | null
           id?: string
           motif?: Database["public"]["Enums"]["ticket_motif"]
           motif_detail?: string | null
@@ -385,6 +484,7 @@ export type Database = {
           heure_debut_effectif?: string | null
           heure_fin_effectif?: string | null
           hors_contrat?: boolean
+          hotline_override?: string | null
           id?: string
           motif?: Database["public"]["Enums"]["ticket_motif"]
           motif_detail?: string | null
@@ -434,6 +534,7 @@ export type Database = {
         | "maintenance"
         | "hors_contrat"
         | "cimco"
+        | "souscription"
       ticket_motif:
         | "aide_programmation"
         | "modification_pp"
@@ -584,6 +685,7 @@ export const Constants = {
         "maintenance",
         "hors_contrat",
         "cimco",
+        "souscription",
       ],
       ticket_motif: [
         "aide_programmation",
