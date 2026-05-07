@@ -125,4 +125,8 @@ export const simulatedEventRange = (ticket: FicamTicket) => {
   return { start_at: start.toISOString(), end_at: end.toISOString(), label: `${fmtDateTime(start)} → ${fmtDateTime(end)}` };
 };
 
-export const contractLabel = (contractType?: ContractType | null) => CONTRACT_TYPES[(contractType || "hors_contrat") as ContractType] ?? "Hors Contrat";
+export const contractLabel = (contractType?: string | null) => {
+  // "maintenance" seule est affichée comme "Maintenance + Hotline"
+  const key = contractType === "maintenance" ? "maintenance_hotline" : (contractType || "hors_contrat");
+  return (CONTRACT_TYPES as any)[key] ?? "Hors Contrat";
+};
