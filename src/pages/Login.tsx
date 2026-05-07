@@ -1,42 +1,70 @@
-import { TECHNICIENS } from "@/lib/constants";
+import { useState } from "react";
+import { TECH_EMAILS, TECH_PASSWORD } from "@/lib/constants";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useNavigate } from "react-router-dom";
-import { technicianInitials } from "@/lib/ficam";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import logo from "@/assets/ficam-logo.png";
 
 export default function Login() {
   const { setTechnicien } = useTechnician();
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const choose = (name: string) => {
-    setTechnicien(name);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const tech = TECH_EMAILS[email.trim().toLowerCase()];
+    if (!tech) {
+      setLoading(false);
+      return toast.error("Email non reconnu");
+    }
+    if (password !== TECH_PASSWORD) {
+      setLoading(false);
+      return toast.error("Mot de passe incorrect");
+    }
+    setTechnicien(tech);
+    toast.success(`Bienvenue ${tech}`);
     navigate("/");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/30 flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl">
-        <div className="text-center mb-10">
+      <form onSubmit={submit} className="w-full max-w-md bg-card border rounded-2xl p-8 shadow-xl space-y-5">
+        <div className="text-center">
           <img src={logo} alt="FICAM" className="w-20 h-20 mx-auto mb-4 rounded-2xl shadow-lg" />
-          <h1 className="text-4xl font-bold tracking-tight">CRM Hotline FICAM</h1>
-          <p className="text-muted-foreground mt-2">Sélectionnez votre profil pour commencer</p>
+          <h1 className="text-2xl font-bold">CRM Hotline FICAM</h1>
+          <p className="text-sm text-muted-foreground mt-1">Connexion technicien</p>
         </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {TECHNICIENS.map((name) => (
-            <button
-              key={name}
-              onClick={() => choose(name)}
-              className="group p-4 rounded-xl border border-border bg-card hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all text-left"
-            >
-              <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                <span className="text-xs font-bold">{technicianInitials(name)}</span>
-              </div>
-              <div className="font-medium text-sm leading-tight">{name}</div>
-            </button>
-          ))}
+        <div>
+          <Label>Email professionnel</Label>
+          <Input
+            type="email"
+            autoFocus
+            placeholder="prenom.nom@ficam.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </div>
-      </div>
+        <div>
+          <Label>Mot de passe</Label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>Se connecter</Button>
+        <p className="text-[11px] text-center text-muted-foreground">
+          Accès réservé aux techniciens FICAM (@ficam.com)
+        </p>
+      </form>
     </div>
   );
 }

@@ -542,6 +542,15 @@ export type Database = {
         | "mise_a_jour_licence"
         | "autre"
         | "cimco"
+        | "aide_prog_tournage"
+        | "aide_prog_fraisage"
+        | "aide_prog_millturn"
+        | "mod_pp_tournage"
+        | "mod_pp_fraisage_3_4"
+        | "mod_pp_fraisage_5"
+        | "mod_pp_millturn"
+        | "install_mastercam"
+        | "migration_pp"
       ticket_priority: "basse" | "haute" | "critique"
       ticket_status:
         | "ouvert"
@@ -694,6 +703,15 @@ export const Constants = {
         "mise_a_jour_licence",
         "autre",
         "cimco",
+        "aide_prog_tournage",
+        "aide_prog_fraisage",
+        "aide_prog_millturn",
+        "mod_pp_tournage",
+        "mod_pp_fraisage_3_4",
+        "mod_pp_fraisage_5",
+        "mod_pp_millturn",
+        "install_mastercam",
+        "migration_pp",
       ],
       ticket_priority: ["basse", "haute", "critique"],
       ticket_status: [

@@ -33,7 +33,7 @@ export default function Tickets() {
   const isCimcoOnly = technicien === "Michael DERLON";
 
   const load = async () => {
-    let q = supabase.from("tickets").select("*").order("date_ouverture", { ascending: false }).limit(500);
+    let q = supabase.from("tickets").select("*").order("date_ouverture", { ascending: false }).range(0, 9999);
     const { data } = await q;
     let list = data ?? [];
     if (isCimcoOnly) {

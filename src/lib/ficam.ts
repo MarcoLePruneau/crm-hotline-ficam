@@ -24,10 +24,10 @@ export const technicianInitials = (name?: string | null) => {
 };
 
 // Règle métier : Hotline OUI si contrat hotline, maintenance+hotline, souscription ou CIMCO.
-// La maintenance seule donne aussi droit à la hotline (règle d'or FICAM).
-export const hotlineRight = (contractType?: ContractType | null, hotlineExpiry?: string | null) => {
+// "Maintenance seule" est mappée vers "Maintenance + Hotline" (règle d'or FICAM).
+export const hotlineRight = (contractType?: string | null, hotlineExpiry?: string | null) => {
   if (!contractType || contractType === "hors_contrat") return "NON";
-  if (contractType === "maintenance") return "OUI"; // règle d'or : maintenance ⇒ hotline
+  if (contractType === "maintenance") return "OUI";
   if (hotlineExpiry && new Date(hotlineExpiry) < new Date() && contractType === "hotline") return "HORS CONTRAT";
   return "OUI";
 };
@@ -125,4 +125,8 @@ export const simulatedEventRange = (ticket: FicamTicket) => {
   return { start_at: start.toISOString(), end_at: end.toISOString(), label: `${fmtDateTime(start)} → ${fmtDateTime(end)}` };
 };
 
-export const contractLabel = (contractType?: ContractType | null) => CONTRACT_TYPES[(contractType || "hors_contrat") as ContractType] ?? "Hors Contrat";
+export const contractLabel = (contractType?: string | null) => {
+  // "maintenance" seule est affichée comme "Maintenance + Hotline"
+  const key = contractType === "maintenance" ? "maintenance_hotline" : (contractType || "hors_contrat");
+  return (CONTRACT_TYPES as any)[key] ?? "Hors Contrat";
+};

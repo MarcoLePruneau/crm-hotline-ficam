@@ -58,7 +58,8 @@ export default function Clients() {
   const contractsFileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    const { data } = await supabase.from("clients").select("*").order("entreprise");
+    // Pas de limite : on charge tous les clients pour permettre une recherche globale
+    const { data } = await supabase.from("clients").select("*").order("entreprise").range(0, 9999);
     setClients(data ?? []);
   };
   useEffect(() => { load(); }, []);
@@ -258,7 +259,7 @@ export default function Clients() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 500).map((c) => {
+                {filtered.map((c) => {
                   const s = getContractStatus(c.date_echeance_maintenance ?? c.date_echeance_hotline);
                   const horsContrat = !(HOTLINE_ELIGIBLE_TYPES as readonly string[]).includes(c.contract_type);
                   return (
@@ -291,7 +292,7 @@ export default function Clients() {
               </tbody>
             </table>
           </div>
-          {filtered.length > 500 && <p className="text-xs text-muted-foreground text-center">Affichage limité à 500 lignes — affinez la recherche.</p>}
+          <p className="text-xs text-muted-foreground text-center">{filtered.length} client(s) affiché(s) — recherche globale sur toute la base</p>
         </CardContent>
       </Card>
 

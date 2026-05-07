@@ -72,7 +72,7 @@ export default function Messages() {
     };
   }, [me]);
 
-  // Charger présence + abonnement realtime
+  // Charger présence + abonnement realtime + toast connexion collègues
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from("technician_presence").select("*");
@@ -85,7 +85,16 @@ export default function Messages() {
       .channel("presence-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "technician_presence" }, (payload: any) => {
         const row = payload.new as Presence;
-        if (row?.technicien) setPresence((p) => ({ ...p, [row.technicien]: row }));
+        if (!row?.technicien || row.technicien === me) return;
+        setPresence((p) => {
+          const prev = p[row.technicien];
+          const wasOnline = prev?.status === "online" && Date.now() - new Date(prev.last_seen).getTime() < ONLINE_THRESHOLD_MS;
+          const isNowOnline = row.status === "online" && Date.now() - new Date(row.last_seen).getTime() < ONLINE_THRESHOLD_MS;
+          if (!wasOnline && isNowOnline) {
+            toast.success(`${row.technicien} est en ligne`);
+          }
+          return { ...p, [row.technicien]: row };
+        });
       })
       .subscribe();
     const refresh = setInterval(load, 30_000);
@@ -93,7 +102,7 @@ export default function Messages() {
       supabase.removeChannel(ch);
       clearInterval(refresh);
     };
-  }, []);
+  }, [me]);
 
   // Charger compteurs de non-lus + messages de la conv sélectionnée
   const loadUnread = async () => {
@@ -136,6 +145,22 @@ export default function Messages() {
     else setMessages([]);
   }, [selected]);
 
+  // Bip sonore court (WebAudio, sans fichier)
+  const beep = () => {
+    try {
+      const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.value = 0.05;
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.18);
+    } catch { /* noop */ }
+  };
+
   // Realtime messages
   useEffect(() => {
     const ch = supabase
@@ -148,9 +173,14 @@ export default function Messages() {
         if (inCurrentConv) {
           setMessages((prev) => [...prev, m]);
           if (m.recipient === me) {
+            beep();
             supabase.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("id", m.id).then(() => {});
           }
         } else if (m.recipient === me) {
+          beep();
+          toast.message(`📬 Nouveau message de ${m.sender}`, {
+            description: m.content?.slice(0, 80) ?? "Pièce jointe",
+          });
           setUnread((u) => ({ ...u, [m.sender]: (u[m.sender] ?? 0) + 1 }));
         }
       })
