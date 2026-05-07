@@ -145,6 +145,22 @@ export default function Messages() {
     else setMessages([]);
   }, [selected]);
 
+  // Bip sonore court (WebAudio, sans fichier)
+  const beep = () => {
+    try {
+      const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.value = 0.05;
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.18);
+    } catch { /* noop */ }
+  };
+
   // Realtime messages
   useEffect(() => {
     const ch = supabase
@@ -157,9 +173,14 @@ export default function Messages() {
         if (inCurrentConv) {
           setMessages((prev) => [...prev, m]);
           if (m.recipient === me) {
+            beep();
             supabase.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("id", m.id).then(() => {});
           }
         } else if (m.recipient === me) {
+          beep();
+          toast.message(`📬 Nouveau message de ${m.sender}`, {
+            description: m.content?.slice(0, 80) ?? "Pièce jointe",
+          });
           setUnread((u) => ({ ...u, [m.sender]: (u[m.sender] ?? 0) + 1 }));
         }
       })
