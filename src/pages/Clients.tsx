@@ -58,7 +58,8 @@ export default function Clients() {
   const contractsFileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    const { data } = await supabase.from("clients").select("*").order("entreprise");
+    // Pas de limite : on charge tous les clients pour permettre une recherche globale
+    const { data } = await supabase.from("clients").select("*").order("entreprise").range(0, 9999);
     setClients(data ?? []);
   };
   useEffect(() => { load(); }, []);
