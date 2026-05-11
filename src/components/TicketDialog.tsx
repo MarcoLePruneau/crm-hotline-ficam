@@ -69,7 +69,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
         .select("id, entreprise, contact_nom, telephone, contract_type, date_echeance_hotline, date_echeance_maintenance, teamviewer_id, ville")
         .ilike("entreprise", `%${q}%`)
         .order("entreprise")
-        .limit(50);
+        .limit(200);
       setClientResults(data ?? []);
     }, 150);
     return () => clearTimeout(t);

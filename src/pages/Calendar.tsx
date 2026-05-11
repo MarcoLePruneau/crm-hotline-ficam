@@ -27,7 +27,7 @@ export default function CalendarPage() {
       .from("tickets")
       .select("id, ticket_number, client_nom, motif, statut, priorite, technicien, scheduled_at, date_ouverture, heure_debut_effectif")
       .order("scheduled_at", { ascending: true })
-      .limit(2000);
+      .range(0, 9999);
     setTickets(data ?? []);
   };
   useEffect(() => { load(); }, []);

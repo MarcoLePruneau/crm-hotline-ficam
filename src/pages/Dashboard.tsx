@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, ACTIVE_STATUTS } from "@/lib/constants";
 import { useTechnician } from "@/hooks/useTechnician";
+import { fetchAll } from "@/lib/fetchAll";
 
 export default function Dashboard() {
   const { technicien } = useTechnician();
@@ -19,19 +20,23 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [t, c] = await Promise.all([
-        supabase.from("tickets").select("*").order("date_ouverture", { ascending: false }).limit(500),
-        supabase.from("clients").select("*").limit(2000),
-      ]);
-      let tick = t.data ?? [];
-      let cli = c.data ?? [];
-      if (isCimcoOnly) {
-        const cimcoIds = new Set(cli.filter((x) => x.contract_type === "cimco").map((x) => x.id));
-        cli = cli.filter((x) => x.contract_type === "cimco");
-        tick = tick.filter((x) => x.motif === "cimco" || cimcoIds.has(x.client_id));
+      try {
+        const [tick0, cli0] = await Promise.all([
+          fetchAll<any>("tickets", (q) => q.order("date_ouverture", { ascending: false })),
+          fetchAll<any>("clients"),
+        ]);
+        let tick = tick0;
+        let cli = cli0;
+        if (isCimcoOnly) {
+          const cimcoIds = new Set(cli.filter((x) => x.contract_type === "cimco").map((x) => x.id));
+          cli = cli.filter((x) => x.contract_type === "cimco");
+          tick = tick.filter((x) => x.motif === "cimco" || cimcoIds.has(x.client_id));
+        }
+        setTickets(tick);
+        setClients(cli);
+      } catch (e) {
+        console.error(e);
       }
-      setTickets(tick);
-      setClients(cli);
     })();
   }, [technicien]);
 
