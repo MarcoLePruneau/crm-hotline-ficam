@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import TicketDialog from "@/components/TicketDialog";
 import tvLogo from "@/assets/teamviewer.png";
+import { fetchAll } from "@/lib/fetchAll";
 
 const computeDuration = (open: string | null, close: string | null) => {
   if (!open || !close) return 0;
