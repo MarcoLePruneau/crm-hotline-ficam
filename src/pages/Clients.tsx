@@ -58,9 +58,13 @@ export default function Clients() {
   const contractsFileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
-    // Pas de limite : on charge tous les clients pour permettre une recherche globale
-    const { data } = await supabase.from("clients").select("*").order("entreprise").range(0, 9999);
-    setClients(data ?? []);
+    // Pagination par tranches de 1000 pour contourner la limite Supabase et charger TOUS les clients
+    try {
+      const data = await fetchAll<any>("clients", (q) => q.order("entreprise"));
+      setClients(data);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erreur de chargement");
+    }
   };
   useEffect(() => { load(); }, []);
 
