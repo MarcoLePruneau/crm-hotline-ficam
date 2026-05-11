@@ -113,4 +113,20 @@
     box-shadow: 0 25px 50px -12px hsl(0 0% 0% / 0.25) !important;
   }
   [role="dialog"]:focus, [role="dialog"]:focus-visible { outline: none !important; box-shadow: 0 25px 50px -12px hsl(0 0% 0% / 0.25) !important; }
+
+  /* Mode sombre : rendre visibles les icônes natives (calendrier/horloge) des inputs date/time */
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  .dark input[type="month"]::-webkit-calendar-picker-indicator,
+  .dark input[type="week"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.6);
+    opacity: 0.9;
+    cursor: pointer;
+  }
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
 }
