@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, ACTIVE_STATUTS } from "@/lib/constants";
 import { useTechnician } from "@/hooks/useTechnician";
+import { fetchAll } from "@/lib/fetchAll";
 
 export default function Dashboard() {
   const { technicien } = useTechnician();
