@@ -16,6 +16,7 @@ import { contractLabel } from "@/lib/ficam";
 import { getContractStatus } from "@/lib/contractStatus";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { fetchAll } from "@/lib/fetchAll";
 
 const empty = {
   entreprise: "", contact_nom: "", contact_fonction: "", telephone: "", email: "",
