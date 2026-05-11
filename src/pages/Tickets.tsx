@@ -33,9 +33,13 @@ export default function Tickets() {
   const isCimcoOnly = technicien === "Michael DERLON";
 
   const load = async () => {
-    let q = supabase.from("tickets").select("*").order("date_ouverture", { ascending: false }).range(0, 9999);
-    const { data } = await q;
-    let list = data ?? [];
+    let list: any[] = [];
+    try {
+      list = await fetchAll<any>("tickets", (q) => q.order("date_ouverture", { ascending: false }));
+    } catch (e: any) {
+      toast.error(e.message ?? "Erreur de chargement");
+      return;
+    }
     if (isCimcoOnly) {
       // On filtre côté client : motif=cimco OU client lié à un contrat CIMCO
       const clientIds = list.map((t) => t.client_id).filter(Boolean);
