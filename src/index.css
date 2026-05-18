@@ -138,17 +138,17 @@
   input[type="datetime-local"]::-webkit-calendar-picker-indicator,
   input[type="month"]::-webkit-calendar-picker-indicator,
   input[type="week"]::-webkit-calendar-picker-indicator {
-    filter: invert(0) brightness(0);
-    opacity: 0.85;
+    filter: invert(0) brightness(0) !important;
+    opacity: 0.85 !important;
     cursor: pointer;
   }
-  .dark input[type="date"]::-webkit-calendar-picker-indicator,
-  .dark input[type="time"]::-webkit-calendar-picker-indicator,
-  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-  .dark input[type="month"]::-webkit-calendar-picker-indicator,
-  .dark input[type="week"]::-webkit-calendar-picker-indicator {
-    filter: invert(1) brightness(2);
-    opacity: 1;
+  html.dark input[type="date"]::-webkit-calendar-picker-indicator,
+  html.dark input[type="time"]::-webkit-calendar-picker-indicator,
+  html.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  html.dark input[type="month"]::-webkit-calendar-picker-indicator,
+  html.dark input[type="week"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(3) !important;
+    opacity: 1 !important;
     cursor: pointer;
   }
 }
