@@ -161,22 +161,23 @@ export default function Messages() {
     } catch { /* noop */ }
   };
 
-  // Realtime messages
+  // Ref pour lire la sélection courante sans re-souscrire
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => { selectedRef.current = selected; }, [selected]);
+
+  // Realtime messages (souscription stable, ne se reconnecte pas à chaque changement de conv)
   useEffect(() => {
     const ch = supabase
-      .channel("dm-changes")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, (payload: any) => {
+      .channel(`dm-changes-${me}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages", filter: `recipient=eq.${me}` }, (payload: any) => {
         const m = payload.new as Message;
-        const inCurrentConv =
-          selected &&
-          ((m.sender === me && m.recipient === selected) || (m.sender === selected && m.recipient === me));
+        const sel = selectedRef.current;
+        const inCurrentConv = sel && m.sender === sel;
         if (inCurrentConv) {
-          setMessages((prev) => [...prev, m]);
-          if (m.recipient === me) {
-            beep();
-            supabase.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("id", m.id).then(() => {});
-          }
-        } else if (m.recipient === me) {
+          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          beep();
+          supabase.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("id", m.id).then(() => {});
+        } else {
           beep();
           toast.message(`📬 Nouveau message de ${m.sender}`, {
             description: m.content?.slice(0, 80) ?? "Pièce jointe",
@@ -184,11 +185,16 @@ export default function Messages() {
           setUnread((u) => ({ ...u, [m.sender]: (u[m.sender] ?? 0) + 1 }));
         }
       })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages", filter: `sender=eq.${me}` }, (payload: any) => {
+        const m = payload.new as Message;
+        const sel = selectedRef.current;
+        if (sel && m.recipient === sel) {
+          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+        }
+      })
       .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [me, selected]);
+    return () => { supabase.removeChannel(ch); };
+  }, [me]);
 
   // Auto-scroll
   useEffect(() => {
