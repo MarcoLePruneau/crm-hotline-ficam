@@ -82,7 +82,7 @@ export default function Messages() {
     };
     load();
     const ch = supabase
-      .channel("presence-changes")
+      .channel(`presence-changes-${me}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "technician_presence" }, (payload: any) => {
         const row = payload.new as Presence;
         if (!row?.technicien || row.technicien === me) return;
