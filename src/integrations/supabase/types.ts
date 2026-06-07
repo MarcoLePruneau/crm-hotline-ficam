@@ -303,6 +303,33 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_preferences: {
+        Row: {
+          created_at: string
+          pense_betes: Json
+          shortcuts: Json
+          technicien: string
+          updated_at: string
+          widgets: Json
+        }
+        Insert: {
+          created_at?: string
+          pense_betes?: Json
+          shortcuts?: Json
+          technicien: string
+          updated_at?: string
+          widgets?: Json
+        }
+        Update: {
+          created_at?: string
+          pense_betes?: Json
+          shortcuts?: Json
+          technicien?: string
+          updated_at?: string
+          widgets?: Json
+        }
+        Relationships: []
+      }
       technician_presence: {
         Row: {
           last_seen: string
