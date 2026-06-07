@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Moon, Sun, Calendar, AlertTriangle } from "lucide-react";
+import { LogOut, Moon, Sun, Calendar, AlertTriangle, Users, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
