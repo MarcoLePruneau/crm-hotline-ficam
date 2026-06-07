@@ -400,10 +400,16 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
           <div>
             <div className="flex items-center justify-between">
               <Label>Contact</Label>
-              <Button type="button" size="sm" variant="ghost"
-                onClick={() => setNewContactOpen((o) => !o)} disabled={!form.client_id}>
-                <UserPlus className="w-3 h-3" /> Nouveau contact
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button type="button" size="sm" variant="ghost"
+                  onClick={openEditContact} disabled={!form.contact_id} title="Éditer Téléphone / ID TeamViewer">
+                  <Pencil className="w-3 h-3" /> Éditer
+                </Button>
+                <Button type="button" size="sm" variant="ghost"
+                  onClick={() => setNewContactOpen((o) => !o)} disabled={!form.client_id}>
+                  <UserPlus className="w-3 h-3" /> Nouveau contact
+                </Button>
+              </div>
             </div>
             <Select value={form.contact_id} onValueChange={chooseContact} disabled={!form.client_id}>
               <SelectTrigger><SelectValue placeholder="Choisir un contact..." /></SelectTrigger>
@@ -416,6 +422,24 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
                 {contacts.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Aucun contact enregistré</div>}
               </SelectContent>
             </Select>
+
+            {editContactOpen && (
+              <div className="mt-2 p-3 border rounded-lg bg-primary/5 grid grid-cols-2 gap-2">
+                <div className="col-span-2 text-xs font-medium text-muted-foreground">
+                  Édition rapide : {contacts.find((c) => c.id === form.contact_id)?.nom}
+                </div>
+                <div><Label className="text-xs">Téléphone</Label>
+                  <Input value={editContact.telephone} onChange={(e) => setEditContact({ ...editContact, telephone: e.target.value })} />
+                </div>
+                <div><Label className="text-xs">ID TeamViewer</Label>
+                  <Input className="font-mono" value={editContact.teamviewer_id} onChange={(e) => setEditContact({ ...editContact, teamviewer_id: e.target.value })} />
+                </div>
+                <div className="col-span-2 flex gap-2">
+                  <Button size="sm" onClick={saveContactEdit} disabled={savingContact}>Enregistrer</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditContactOpen(false)}>Annuler</Button>
+                </div>
+              </div>
+            )}
 
             {newContactOpen && (
               <div className="mt-2 p-3 border rounded-lg bg-accent/30 grid grid-cols-2 gap-2">
