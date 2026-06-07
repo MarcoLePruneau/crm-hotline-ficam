@@ -199,7 +199,37 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     toast.success("Contact créé et sélectionné");
   };
 
-  // === Détection récurrence client + même motif (4-5 sur le mois) ===
+  const openEditContact = () => {
+    const ct = contacts.find((x) => x.id === form.contact_id);
+    if (!ct) return toast.error("Sélectionnez d'abord un contact");
+    setEditContact({ telephone: ct.telephone ?? "", teamviewer_id: ct.teamviewer_id ?? "" });
+    setEditContactOpen(true);
+  };
+
+  const saveContactEdit = async () => {
+    if (!form.contact_id) return;
+    setSavingContact(true);
+    const { data, error } = await supabase
+      .from("client_contacts")
+      .update({
+        telephone: editContact.telephone || null,
+        teamviewer_id: editContact.teamviewer_id || null,
+      })
+      .eq("id", form.contact_id)
+      .select()
+      .single();
+    setSavingContact(false);
+    if (error) return toast.error(error.message);
+    setContacts((cs) => cs.map((c) => (c.id === data.id ? data : c)));
+    setForm((f: any) => ({
+      ...f,
+      telephone_client: data.telephone || f.telephone_client,
+      teamviewer_id: data.teamviewer_id || f.teamviewer_id,
+    }));
+    setEditContactOpen(false);
+    toast.success("Contact mis à jour");
+  };
+
   useEffect(() => {
     if (!form.client_id || !form.motif) { setRecurrence(null); return; }
     (async () => {
