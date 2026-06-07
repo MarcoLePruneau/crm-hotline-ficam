@@ -66,6 +66,18 @@ export default function Settings() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" /> Base de données Clients & Contacts</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">Accès complet à la base : recherche globale sur l'intégralité des clients et contacts, sans limitation.</p>
+          <Button onClick={() => navigate("/clients")}>
+            Ouvrir la base Clients / Contacts <ArrowRight className="w-4 h-4" />
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2"><Calendar className="w-5 h-5" /> Synchronisation calendrier</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
