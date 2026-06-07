@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Moon, Sun, Calendar, AlertTriangle } from "lucide-react";
+import { LogOut, Moon, Sun, Calendar, AlertTriangle, Users, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -61,6 +61,18 @@ export default function Settings() {
               Basculer
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5" /> Base de données Clients & Contacts</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">Accès complet à la base : recherche globale sur l'intégralité des clients et contacts, sans limitation.</p>
+          <Button onClick={() => navigate("/clients")}>
+            Ouvrir la base Clients / Contacts <ArrowRight className="w-4 h-4" />
+          </Button>
         </CardContent>
       </Card>
 

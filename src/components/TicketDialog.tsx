@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, UserPlus, Search, Paperclip, Trash2, Lightbulb, AlertTriangle, Mail } from "lucide-react";
+import { Plus, UserPlus, Search, Paperclip, Trash2, Lightbulb, AlertTriangle, Mail, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, Motif, Priorite, Statut } from "@/lib/constants";
 import { hotlineRight, technicianInitials, launchTeamViewer, formatTicketBlock } from "@/lib/ficam";
@@ -50,6 +50,9 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
   const [ticket, setTicket] = useState<any>(null);
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [newContact, setNewContact] = useState({ nom: "", telephone: "", teamviewer_id: "", fonction: "" });
+  const [editContactOpen, setEditContactOpen] = useState(false);
+  const [editContact, setEditContact] = useState({ telephone: "", teamviewer_id: "" });
+  const [savingContact, setSavingContact] = useState(false);
   const [recurrence, setRecurrence] = useState<{ count: number; motifLabel: string } | null>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -196,7 +199,37 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     toast.success("Contact créé et sélectionné");
   };
 
-  // === Détection récurrence client + même motif (4-5 sur le mois) ===
+  const openEditContact = () => {
+    const ct = contacts.find((x) => x.id === form.contact_id);
+    if (!ct) return toast.error("Sélectionnez d'abord un contact");
+    setEditContact({ telephone: ct.telephone ?? "", teamviewer_id: ct.teamviewer_id ?? "" });
+    setEditContactOpen(true);
+  };
+
+  const saveContactEdit = async () => {
+    if (!form.contact_id) return;
+    setSavingContact(true);
+    const { data, error } = await supabase
+      .from("client_contacts")
+      .update({
+        telephone: editContact.telephone || null,
+        teamviewer_id: editContact.teamviewer_id || null,
+      })
+      .eq("id", form.contact_id)
+      .select()
+      .single();
+    setSavingContact(false);
+    if (error) return toast.error(error.message);
+    setContacts((cs) => cs.map((c) => (c.id === data.id ? data : c)));
+    setForm((f: any) => ({
+      ...f,
+      telephone_client: data.telephone || f.telephone_client,
+      teamviewer_id: data.teamviewer_id || f.teamviewer_id,
+    }));
+    setEditContactOpen(false);
+    toast.success("Contact mis à jour");
+  };
+
   useEffect(() => {
     if (!form.client_id || !form.motif) { setRecurrence(null); return; }
     (async () => {
@@ -367,10 +400,16 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
           <div>
             <div className="flex items-center justify-between">
               <Label>Contact</Label>
-              <Button type="button" size="sm" variant="ghost"
-                onClick={() => setNewContactOpen((o) => !o)} disabled={!form.client_id}>
-                <UserPlus className="w-3 h-3" /> Nouveau contact
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button type="button" size="sm" variant="ghost"
+                  onClick={openEditContact} disabled={!form.contact_id} title="Éditer Téléphone / ID TeamViewer">
+                  <Pencil className="w-3 h-3" /> Éditer
+                </Button>
+                <Button type="button" size="sm" variant="ghost"
+                  onClick={() => setNewContactOpen((o) => !o)} disabled={!form.client_id}>
+                  <UserPlus className="w-3 h-3" /> Nouveau contact
+                </Button>
+              </div>
             </div>
             <Select value={form.contact_id} onValueChange={chooseContact} disabled={!form.client_id}>
               <SelectTrigger><SelectValue placeholder="Choisir un contact..." /></SelectTrigger>
@@ -383,6 +422,24 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
                 {contacts.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">Aucun contact enregistré</div>}
               </SelectContent>
             </Select>
+
+            {editContactOpen && (
+              <div className="mt-2 p-3 border rounded-lg bg-primary/5 grid grid-cols-2 gap-2">
+                <div className="col-span-2 text-xs font-medium text-muted-foreground">
+                  Édition rapide : {contacts.find((c) => c.id === form.contact_id)?.nom}
+                </div>
+                <div><Label className="text-xs">Téléphone</Label>
+                  <Input value={editContact.telephone} onChange={(e) => setEditContact({ ...editContact, telephone: e.target.value })} />
+                </div>
+                <div><Label className="text-xs">ID TeamViewer</Label>
+                  <Input className="font-mono" value={editContact.teamviewer_id} onChange={(e) => setEditContact({ ...editContact, teamviewer_id: e.target.value })} />
+                </div>
+                <div className="col-span-2 flex gap-2">
+                  <Button size="sm" onClick={saveContactEdit} disabled={savingContact}>Enregistrer</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditContactOpen(false)}>Annuler</Button>
+                </div>
+              </div>
+            )}
 
             {newContactOpen && (
               <div className="mt-2 p-3 border rounded-lg bg-accent/30 grid grid-cols-2 gap-2">
