@@ -50,6 +50,9 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
   const [ticket, setTicket] = useState<any>(null);
   const [newContactOpen, setNewContactOpen] = useState(false);
   const [newContact, setNewContact] = useState({ nom: "", telephone: "", teamviewer_id: "", fonction: "" });
+  const [editContactOpen, setEditContactOpen] = useState(false);
+  const [editContact, setEditContact] = useState({ telephone: "", teamviewer_id: "" });
+  const [savingContact, setSavingContact] = useState(false);
   const [recurrence, setRecurrence] = useState<{ count: number; motifLabel: string } | null>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
