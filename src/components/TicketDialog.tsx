@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, UserPlus, Search, Paperclip, Trash2, Lightbulb, AlertTriangle, Mail } from "lucide-react";
+import { Plus, UserPlus, Search, Paperclip, Trash2, Lightbulb, AlertTriangle, Mail, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, Motif, Priorite, Statut } from "@/lib/constants";
 import { hotlineRight, technicianInitials, launchTeamViewer, formatTicketBlock } from "@/lib/ficam";
