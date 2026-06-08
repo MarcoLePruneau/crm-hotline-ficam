@@ -275,7 +275,11 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     if (ticketId) loadAttachments(ticketId);
   };
 
-  const fileUrl = (p: string) => supabase.storage.from("ticket-attachments").getPublicUrl(p).data.publicUrl;
+  const openAttachment = async (p: string) => {
+    const { data, error } = await supabase.storage.from("ticket-attachments").createSignedUrl(p, 3600);
+    if (error || !data?.signedUrl) return toast.error("Lien indisponible");
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
 
   const save = async () => {
     if (!form.client_id || !form.client_nom) return toast.error("Sélectionnez un client");

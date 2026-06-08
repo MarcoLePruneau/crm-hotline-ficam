@@ -258,8 +258,20 @@ export default function Messages() {
     if (error) toast.error("Échec de l'envoi du fichier");
   };
 
-  const fileUrl = (path: string) =>
-    supabase.storage.from("chat-files").getPublicUrl(path).data.publicUrl;
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const missing = messages.filter((m) => m.file_path && !signedUrls[m.file_path]);
+    if (missing.length === 0) return;
+    (async () => {
+      const next: Record<string, string> = {};
+      for (const m of missing) {
+        const { data } = await supabase.storage.from("chat-files").createSignedUrl(m.file_path!, 3600);
+        if (data?.signedUrl) next[m.file_path!] = data.signedUrl;
+      }
+      if (Object.keys(next).length) setSignedUrls((s) => ({ ...s, ...next }));
+    })();
+  }, [messages]);
+  const fileUrl = (path: string) => signedUrls[path] ?? "#";
 
   const formatDay = (d: Date) =>
     isToday(d) ? "Aujourd'hui" : isYesterday(d) ? "Hier" : format(d, "EEEE d MMMM", { locale: fr });
