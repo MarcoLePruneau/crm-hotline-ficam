@@ -193,6 +193,9 @@ function TicketsWidget({ tickets, me }: { tickets: any[]; me: string }) {
                     >
                       {PRIORITES[t.priorite as keyof typeof PRIORITES]}
                     </Badge>
+                    {t.source === "ia_mastercam" && (
+                      <Badge className="bg-purple-600 text-white hover:bg-purple-600" title="Ticket créé par l'agent IA Mastercam">🤖 IA</Badge>
+                    )}
                     <span className="text-sm font-medium truncate">{t.client_nom}</span>
                   </div>
                   <Badge variant="outline" className="font-mono text-xs">{t.ticket_number}</Badge>
