@@ -552,7 +552,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_technicien: { Args: never; Returns: string }
+      is_ficam_tech: { Args: never; Returns: boolean }
     }
     Enums: {
       contract_type:
