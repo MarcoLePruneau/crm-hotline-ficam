@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TECH_EMAILS, TECH_PASSWORD } from "@/lib/constants";
-import { useTechnician } from "@/hooks/useTechnician";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,16 +9,16 @@ import { toast } from "sonner";
 import logo from "@/assets/ficam-logo.png";
 
 export default function Login() {
-  const { setTechnicien } = useTechnician();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const tech = TECH_EMAILS[email.trim().toLowerCase()];
+    const normEmail = email.trim().toLowerCase();
+    const tech = TECH_EMAILS[normEmail];
     if (!tech) {
       setLoading(false);
       return toast.error("Email non reconnu");
@@ -27,7 +27,24 @@ export default function Login() {
       setLoading(false);
       return toast.error("Mot de passe incorrect");
     }
-    setTechnicien(tech);
+
+    // Try sign in; if account doesn't exist yet, create it then sign in.
+    let { error } = await supabase.auth.signInWithPassword({ email: normEmail, password });
+    if (error && /invalid login|invalid credentials/i.test(error.message)) {
+      const { error: upErr } = await supabase.auth.signUp({
+        email: normEmail,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (upErr) {
+        setLoading(false);
+        return toast.error(`Création du compte impossible : ${upErr.message}`);
+      }
+      const retry = await supabase.auth.signInWithPassword({ email: normEmail, password });
+      error = retry.error ?? null;
+    }
+    setLoading(false);
+    if (error) return toast.error(error.message);
     toast.success(`Bienvenue ${tech}`);
     navigate("/");
   };
@@ -60,7 +77,9 @@ export default function Login() {
             required
           />
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>Se connecter</Button>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Connexion…" : "Se connecter"}
+        </Button>
         <p className="text-[11px] text-center text-muted-foreground">
           Accès réservé aux techniciens FICAM (@ficam.com)
         </p>

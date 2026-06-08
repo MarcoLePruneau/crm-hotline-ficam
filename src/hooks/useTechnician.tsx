@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-
-const KEY = "ficam.technicien";
+import { supabase } from "@/integrations/supabase/client";
+import { TECH_EMAILS } from "@/lib/constants";
 
 type Ctx = {
   technicien: string | null;
@@ -10,19 +10,27 @@ type Ctx = {
 
 const TechCtx = createContext<Ctx | null>(null);
 
+const techFromEmail = (email?: string | null) =>
+  email ? TECH_EMAILS[email.trim().toLowerCase()] ?? null : null;
+
 export function TechnicianProvider({ children }: { children: ReactNode }) {
   const [technicien, setTechnicienState] = useState<string | null>(null);
 
   useEffect(() => {
-    setTechnicienState(localStorage.getItem(KEY));
+    // hydrate from current session
+    supabase.auth.getSession().then(({ data }) => {
+      setTechnicienState(techFromEmail(data.session?.user?.email));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setTechnicienState(techFromEmail(session?.user?.email));
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  const setTechnicien = (name: string) => {
-    localStorage.setItem(KEY, name);
-    setTechnicienState(name);
-  };
+  // kept for API compatibility; real login happens in Login.tsx via Supabase Auth
+  const setTechnicien = (name: string) => setTechnicienState(name);
   const clear = () => {
-    localStorage.removeItem(KEY);
+    supabase.auth.signOut();
     setTechnicienState(null);
   };
 

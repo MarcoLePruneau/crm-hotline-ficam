@@ -275,7 +275,11 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     if (ticketId) loadAttachments(ticketId);
   };
 
-  const fileUrl = (p: string) => supabase.storage.from("ticket-attachments").getPublicUrl(p).data.publicUrl;
+  const openAttachment = async (p: string) => {
+    const { data, error } = await supabase.storage.from("ticket-attachments").createSignedUrl(p, 3600);
+    if (error || !data?.signedUrl) return toast.error("Lien indisponible");
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
 
   const save = async () => {
     if (!form.client_id || !form.client_nom) return toast.error("Sélectionnez un client");
@@ -589,9 +593,9 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
                 {attachments.map((a) => (
                   <div key={a.id} className="flex items-center gap-2 px-3 py-2 text-sm">
                     <Paperclip className="w-3 h-3 text-muted-foreground" />
-                    <a href={fileUrl(a.file_path)} target="_blank" rel="noreferrer" className="flex-1 truncate hover:underline">
+                    <button type="button" onClick={() => openAttachment(a.file_path)} className="flex-1 truncate text-left hover:underline">
                       {a.file_name}
-                    </a>
+                    </button>
                     <span className="text-xs text-muted-foreground">{a.file_size ? `${(a.file_size / 1024).toFixed(0)} Ko` : ""}</span>
                     <Button size="icon" variant="ghost" onClick={() => removeAttachment(a)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
