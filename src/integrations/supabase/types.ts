@@ -456,6 +456,7 @@ export type Database = {
           priorite: Database["public"]["Enums"]["ticket_priority"]
           resolution: string | null
           scheduled_at: string | null
+          source: string
           statut: Database["public"]["Enums"]["ticket_status"]
           teamviewer_id: string | null
           teamviewer_password: string | null
@@ -489,6 +490,7 @@ export type Database = {
           priorite?: Database["public"]["Enums"]["ticket_priority"]
           resolution?: string | null
           scheduled_at?: string | null
+          source?: string
           statut?: Database["public"]["Enums"]["ticket_status"]
           teamviewer_id?: string | null
           teamviewer_password?: string | null
@@ -522,6 +524,7 @@ export type Database = {
           priorite?: Database["public"]["Enums"]["ticket_priority"]
           resolution?: string | null
           scheduled_at?: string | null
+          source?: string
           statut?: Database["public"]["Enums"]["ticket_status"]
           teamviewer_id?: string | null
           teamviewer_password?: string | null
