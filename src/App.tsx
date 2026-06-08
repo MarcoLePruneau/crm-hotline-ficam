@@ -15,6 +15,7 @@ import CalendarPage from "@/pages/Calendar";
 import Messages from "@/pages/Messages";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import ChatMastercam from "@/pages/ChatMastercam";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/chat-mastercam" element={<ChatMastercam />} />
               <Route element={<RequireTech><Layout /></RequireTech>}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/tickets" element={<Tickets />} />
