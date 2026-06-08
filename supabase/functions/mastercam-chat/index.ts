@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       if (file_path) {
         await admin.from("ticket_attachments").insert({
           ticket_id: ticket.id,
-          storage_path: file_path,
+          file_path,
           file_name: file_name ?? file_path.split("/").pop(),
           uploaded_by: "Agent IA Mastercam",
         });

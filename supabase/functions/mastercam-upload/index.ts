@@ -25,10 +25,10 @@ Deno.serve(async (req) => {
     if (file.size > MAX_BYTES) return Response.json({ error: "file_too_large" }, { status: 400, headers: corsHeaders });
 
     const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
-    const path = `${clientId}/${crypto.randomUUID()}_${safe}`;
+    const path = `mastercam/${clientId}/${crypto.randomUUID()}_${safe}`;
 
     const buf = new Uint8Array(await file.arrayBuffer());
-    const { error } = await admin.storage.from("mastercam-uploads").upload(path, buf, {
+    const { error } = await admin.storage.from("ticket-attachments").upload(path, buf, {
       contentType: file.type || "application/octet-stream",
       upsert: false,
     });
