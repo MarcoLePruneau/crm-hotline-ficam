@@ -491,7 +491,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
               <Input value={form.teamviewer_password} onChange={(e) => setForm({ ...form, teamviewer_password: e.target.value })} /></div>
             <div><Label>Planifier (calendrier)</Label>
               <div className="relative">
-                <Input type="datetime-local" className="pr-10 [color-scheme:light] dark:[color-scheme:dark]" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} />
+                <Input type="datetime-local" className="ticket-themed-datetime pr-10 [color-scheme:light] dark:[color-scheme:dark]" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} />
                 <img src={calendarIconSrc} alt="" aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 object-contain" />
               </div>
             </div>
