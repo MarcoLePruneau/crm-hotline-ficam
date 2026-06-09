@@ -485,7 +485,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
             <div><Label>MDP TeamViewer</Label>
               <Input value={form.teamviewer_password} onChange={(e) => setForm({ ...form, teamviewer_password: e.target.value })} /></div>
             <div><Label>Planifier (calendrier)</Label>
-              <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} /></div>
+              <Input type="datetime-local" className="[color-scheme:light] dark:[color-scheme:dark]" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} /></div>
           </div>
 
           {/* Motif / priorité / statut */}
