@@ -2,17 +2,25 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTechnician } from "@/hooks/useTechnician";
 import { useTheme } from "@/hooks/useTheme";
 import {
-  LayoutDashboard, Ticket, BarChart3, Settings, CalendarDays,
+  LayoutDashboard, Ticket, BarChart3, Settings,
   MessageSquare, Moon, Sun, LogOut, Menu, X
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { technicianInitials } from "@/lib/ficam";
 import logo from "@/assets/ficam-logo.png";
+import whiteCalendarIcon from "@/assets/white-calendar-icon.ico.asset.json";
+import blackCalendarIcon from "@/assets/black-calendar-icon.ico.asset.json";
+
+function CalendarThemedIcon({ className }: { className?: string }) {
+  const { theme } = useTheme();
+  const src = theme === "dark" ? whiteCalendarIcon.url : blackCalendarIcon.url;
+  return <img src={src} alt="" className={cn("object-contain", className)} />;
+}
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/calendar", label: "Calendrier", icon: CalendarDays },
+  { to: "/calendar", label: "Calendrier", icon: CalendarThemedIcon },
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/messages", label: "Messagerie", icon: MessageSquare },
   { to: "/reports", label: "Rapports", icon: BarChart3 },
