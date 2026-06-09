@@ -12,9 +12,12 @@ import { toast } from "sonner";
 import { MOTIFS, PRIORITES, STATUTS, STATUT_COLORS, Motif, Priorite, Statut } from "@/lib/constants";
 import { hotlineRight, technicianInitials, launchTeamViewer, formatTicketBlock } from "@/lib/ficam";
 import { useTechnician } from "@/hooks/useTechnician";
+import { useTheme } from "@/hooks/useTheme";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import tvLogo from "@/assets/teamviewer.png";
+import whiteCalendarIcon from "@/assets/white-calendar-icon.ico.asset.json";
+import blackCalendarIcon from "@/assets/black-calendar-icon.ico.asset.json";
 
 type Props = {
   open: boolean;
@@ -44,6 +47,7 @@ const emptyForm = {
 
 export default function TicketDialog({ open, onOpenChange, ticketId, defaultScheduledAt, onSaved }: Props) {
   const { technicien } = useTechnician();
+  const { theme } = useTheme();
   const [client, setClient] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [form, setForm] = useState<any>(emptyForm);
@@ -334,6 +338,7 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
 
   const auto = client ? hotlineRight(client.contract_type, client.date_echeance_hotline) : null;
   const right = form.hotline_override || auto;
+  const calendarIconSrc = theme === "dark" ? whiteCalendarIcon.url : blackCalendarIcon.url;
 
   const motifLabel = (MOTIFS as any)[form.motif] ?? form.motif;
   const showFormation = /aide/i.test(motifLabel);
@@ -485,7 +490,11 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
             <div><Label>MDP TeamViewer</Label>
               <Input value={form.teamviewer_password} onChange={(e) => setForm({ ...form, teamviewer_password: e.target.value })} /></div>
             <div><Label>Planifier (calendrier)</Label>
-              <Input type="datetime-local" className="[color-scheme:light] dark:[color-scheme:dark]" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} /></div>
+              <div className="relative">
+                <Input type="datetime-local" className="pr-10 [color-scheme:light] dark:[color-scheme:dark]" value={form.scheduled_at} onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })} />
+                <img src={calendarIconSrc} alt="" aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 object-contain" />
+              </div>
+            </div>
           </div>
 
           {/* Motif / priorité / statut */}
