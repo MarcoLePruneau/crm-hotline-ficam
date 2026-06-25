@@ -1,99 +1,35 @@
-# CRM Hotline FICAM — Plan
+## Plan : Corriger la faille Realtime et publier
 
-Application CRM interne pour l'équipe support Mastercam, avec base clients partagée, gestion de tickets, synchronisation bidirectionnelle avec le calendrier Outlook `hot-line@ficam.com`, alertes commerciales et reporting.
+### 1. Sécuriser `realtime.messages`
+Ajouter via une migration des politiques RLS sur la table `realtime.messages` pour que seuls les techniciens FICAM authentifiés puissent s'abonner aux canaux Realtime :
 
-## 1. Connexion technicien (sans mot de passe)
+- Activer RLS sur `realtime.messages` (si pas déjà fait par défaut).
+- Créer une politique `SELECT` qui autorise uniquement les utilisateurs pour qui `public.is_ficam_tech()` retourne `true`.
+- Restreindre les abonnements aux canaux utilisés par l'app (tickets, direct_messages, presence) en filtrant sur le nom du topic.
 
-- Écran d'accueil : liste des 13 techniciens (Jocelyn VALIERE, Cédric PROVENDIER, Nicolas MERCIER, Eric DAUVILLIERS, Marc-Antoine HENRY, Christophe FERREIRA, Valentin FOLLIOT, Sergio FERREIRA, David MONTOYA, Benoit BOUQUIN, Valentin BEUZELIN, Michael DERLON, NADIA BENGRID).
-- Clic sur un nom → mémorisé en LocalStorage, plus jamais redemandé.
-- Bouton "Changer d'utilisateur" dans le header pour switcher.
-- Chaque ticket / événement créé est tagué automatiquement avec le nom du technicien.
+### 2. Renforcer les politiques `direct_messages`
+Mettre à jour les politiques existantes pour qu'elles appellent explicitement `public.is_ficam_tech()` en complément de `current_technicien()`, afin de lever l'avertissement du scan.
 
-## 2. Base Clients & Contrats
+### 3. Vérifier
+Relancer un scan de sécurité pour confirmer que les deux findings sont résolus.
 
-**Page Clients** (tableau + recherche + filtres contrat) :
-- Champs : Entreprise, Contact, Téléphone, Email, N° série licence Mastercam, Type de contrat (Maintenance seule / Hotline seule / Maintenance + Hotline / Hors Contrat), Date d'échéance maintenance, Notes.
-- **Import Excel/CSV** : bouton "Importer" avec mapping de colonnes, aperçu, validation, et import en masse.
-- Création / édition / suppression manuelle d'un client.
+### 4. Publier
+Appeler `preview_ui--publish` (les métadonnées du site sont déjà à jour : titre, description, OG/Twitter, favicon FICAM Hotline).
 
-**Alertes visuelles automatiques** :
-- Échéance maintenance dépassée → ligne en **rouge gras** + badge "Contrat expiré".
-- Échéance < 30 jours → ligne en **orange** + badge "Expire bientôt".
-- Contrat actif → vert.
-- Badge hotline : "Hors Contrat" ou pas de hotline → badge rouge "⚠ Intervention facturable".
+### Détails techniques
+```sql
+-- Restreindre Realtime aux techniciens FICAM
+ALTER TABLE realtime.messages ENABLE ROW LEVEL SECURITY;
 
-## 3. Tickets & Chronomètre
+CREATE POLICY "ficam_tech_realtime_read"
+ON realtime.messages
+FOR SELECT
+TO authenticated
+USING (public.is_ficam_tech());
 
-**Formulaire nouveau ticket** :
-- Client (autocomplétion depuis la base).
-- Motif : Aide programmation / Modification Post-Processeur / Installation / Mise à jour licence / Autre.
-- Priorité : Basse / Haute / Critique (Machine arrêtée) — avec code couleur.
-- Description libre.
-- Date/heure (défaut : maintenant).
-- Technicien (auto, modifiable).
+-- Durcir direct_messages
+DROP POLICY ... ; -- politiques existantes
+CREATE POLICY ... USING (public.is_ficam_tech() AND (sender = public.current_technicien() OR recipient = public.current_technicien()));
+```
 
-**Chronomètre intégré** : bouton Start/Stop sur chaque ticket ouvert, durée enregistrée. Arrêt automatique à la fermeture du ticket.
-
-**Statuts** : Ouvert / En cours / En attente client / Résolu / Fermé.
-
-**Tableau de bord** : liste des tickets avec filtres (technicien, statut, priorité, période, client), badge visuel de priorité, durée cumulée.
-
-## 4. Synchronisation Outlook (hot-line@ficam.com)
-
-- Connexion unique (admin) au compte partagé via le connecteur Microsoft Outlook + permissions calendrier.
-- **App → Outlook** : chaque ticket créé/modifié/fermé crée ou met à jour un événement dans le calendrier (titre = "[Priorité] Client — Motif", description = détails ticket + technicien, durée = chrono).
-- **Outlook → App** : polling périodique (ex. toutes les 2 min) lit les nouveaux événements du calendrier et les importe comme tickets dans le tableau de bord (même s'ils ont été saisis directement par Nadia ou un autre technicien dans Outlook).
-- Déduplication par ID d'événement Outlook stocké sur le ticket.
-
-## 5. Intelligence & Alertes Commerciales
-
-- Détection automatique : si un même client appelle **> 3 fois dans le mois pour le même motif**, bannière d'alerte sur sa fiche et dans le dashboard :
-  - Motif "Aide programmation" répété → suggère **Formation**.
-  - Motif "Modification PP" répété → suggère **Intégration Post-Processeur**.
-  - Autres motifs → suggère **Prestation de service**.
-- Tableau "Clients à fort appel" trié par fréquence.
-
-## 6. Reporting
-
-- Page Rapports avec filtres (période, technicien, client, motif).
-- Indicateurs : nb tickets, temps total, répartition par motif / priorité / technicien, top clients.
-- Export **PDF** et **Excel** des rapports mensuels.
-
-## 7. Design
-
-- Interface moderne type SaaS (inspiration Linear / Notion), dense mais aérée.
-- Palette : bleu professionnel primaire, accents selon priorité/statut.
-- **Mode sombre** avec toggle (mémorisé).
-- Responsive Desktop + Mobile (sidebar collapsable, tableaux adaptatifs).
-- Composants shadcn/ui, icônes lucide-react.
-
-## Structure des pages
-
-- `/login` — Sélection du technicien (1re fois seulement).
-- `/` — Dashboard (tickets du jour, alertes contrats, alertes commerciales).
-- `/tickets` — Liste + création + détail + chrono.
-- `/clients` — Base clients + import + alertes contrats.
-- `/clients/:id` — Fiche client (historique tickets, alertes commerciales).
-- `/reports` — Rapports et exports PDF/Excel.
-- `/settings` — Connexion Outlook, changement d'utilisateur, mode sombre.
-
-## Détails techniques
-
-- **Stockage** : Lovable Cloud (Supabase). Tables : `clients`, `tickets`, `ticket_time_logs`, `technicians` (statique), `outlook_sync_state`.
-- **Sécurité** : RLS ouverte en lecture/écriture à tout utilisateur authentifié anonyme (équipe interne, pas de login réel — acceptable selon choix utilisateur). À noter : la sélection par nom en LocalStorage n'est pas une authentification sécurisée ; toute personne accédant à l'URL peut se faire passer pour un technicien.
-- **Outlook** : connecteur `microsoft_outlook` via gateway Lovable. Edge functions :
-  - `outlook-sync-push` (créer/mettre à jour événement depuis ticket)
-  - `outlook-sync-pull` (polling + import événements)
-- **Import CSV/XLSX** : parsing côté client avec `xlsx` (SheetJS), insertion batch via Supabase.
-- **Export** : PDF via `jspdf` + `jspdf-autotable`, Excel via `xlsx`.
-- **Chronomètre** : timestamp start/stop stockés en base (résiste aux rechargements).
-- **Polling Outlook** : cron edge function toutes les 2 minutes + bouton "Rafraîchir" manuel.
-
-## Phasage de livraison
-
-1. Base UI + sélection technicien + mode sombre.
-2. Table clients + import CSV/XLSX + alertes contrats.
-3. Tickets + chronomètre + dashboard.
-4. Alertes commerciales (fréquence d'appel).
-5. Connexion Outlook + sync bidirectionnelle.
-6. Rapports + export PDF/Excel.
+Confirmes-tu que je peux appliquer cette migration puis publier ?
