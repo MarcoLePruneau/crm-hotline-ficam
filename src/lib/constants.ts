@@ -51,20 +51,21 @@ export const CLIENT_FILTER_TYPES = {
 // Un client a droit à la hotline si l'un de ces contrats est présent
 export const HOTLINE_ELIGIBLE_TYPES = ["hotline", "maintenance_hotline", "maintenance", "souscription", "cimco"] as const;
 
-// Liste stricte des motifs (V1.3)
+// Liste stricte des motifs (V1.4 — ajout Bug graphique / Affichage)
 export const MOTIFS = {
-  aide_prog_tournage: "Aide programmation tournage",
   aide_prog_fraisage: "Aide programmation fraisage",
+  aide_prog_tournage: "Aide programmation tournage",
   aide_prog_millturn: "Aide programmation MillTurn",
-  mod_pp_tournage: "Modification PP tournage",
   mod_pp_fraisage_3_4: "Modification PP fraisage 3-4 axes",
   mod_pp_fraisage_5: "Modification PP fraisage 5 axes",
+  mod_pp_tournage: "Modification PP tournage",
   mod_pp_millturn: "Modification PP MillTurn",
-  install_mastercam: "Installation Mastercam",
-  mise_a_jour_licence: "Mise à jour de licence",
   migration_pp: "Migration PP",
+  install_mastercam: "Installation Mastercam",
+  mise_a_jour_licence: "Mise à jour de licences",
   cimco: "CIMCO",
-  autre: "Autre",
+  bug_graphique: "Bug graphique / Affichage",
+  autre: "Autres",
 } as const;
 
 export const PRIORITES = {

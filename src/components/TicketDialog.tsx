@@ -321,17 +321,28 @@ export default function TicketDialog({ open, onOpenChange, ticketId, defaultSche
     };
 
     let res;
+    let newTicketId: string | null = null;
     if (ticketId) {
       res = await supabase.from("tickets").update(payload).eq("id", ticketId);
     } else {
-      res = await supabase.from("tickets").insert({
+      const ins = await supabase.from("tickets").insert({
         ...payload,
         technicien: technicien!,
         heure_debut_effectif: scheduled ?? new Date().toISOString(),
-      });
+      }).select("id").single();
+      res = ins;
+      newTicketId = ins.data?.id ?? null;
     }
     if (res.error) return toast.error(res.error.message);
     toast.success(ticketId ? "Ticket mis à jour" : "Ticket créé");
+
+    // Sync sortante Outlook (best-effort, non bloquant)
+    if (newTicketId) {
+      supabase.functions
+        .invoke("outlook-sync", { body: { action: "outbound", ticket_id: newTicketId } })
+        .catch((e) => console.warn("outlook-sync outbound failed", e));
+    }
+
     onOpenChange(false);
     onSaved?.();
   };

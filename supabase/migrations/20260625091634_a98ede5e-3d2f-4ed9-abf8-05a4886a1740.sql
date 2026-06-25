@@ -1,0 +1,2 @@
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS outlook_event_id text;
+CREATE INDEX IF NOT EXISTS idx_tickets_outlook_event_id ON public.tickets(outlook_event_id) WHERE outlook_event_id IS NOT NULL;

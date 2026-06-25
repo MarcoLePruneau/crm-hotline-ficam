@@ -1,1 +1,4 @@
 project_id = "qomhtwiyjlbltgzxgiko"
+
+[functions.outlook-sync]
+verify_jwt = false
