@@ -65,7 +65,8 @@ export default function ChatMastercam() {
     setCompanyErr(null);
     setValidating(true);
     try {
-      const r = await callFn("mastercam-chat", { action: "validate_company", entreprise: companyInput });
+      const normalized = companyInput.trim().replace(/\s+/g, " ").toUpperCase();
+      const r = await callFn("mastercam-chat", { action: "validate_company", entreprise: normalized });
       if (!r.ok) {
         setCompanyErr("Entreprise introuvable dans notre base. Merci de contacter FICAM au 02 37 26 28 11.");
         return;
