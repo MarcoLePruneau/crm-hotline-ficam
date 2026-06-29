@@ -174,19 +174,21 @@ Deno.serve(async (req) => {
     const action = body.action as string;
 
     if (action === "validate_company") {
-      const q = String(body.entreprise ?? "").trim();
+      // Tolérance à la casse : trim + uppercase + suppression espaces multiples
+      const raw = String(body.entreprise ?? "");
+      const q = raw.trim().replace(/\s+/g, " ").toUpperCase();
       if (!q) return Response.json({ ok: false, error: "Nom d'entreprise requis" }, { headers: corsHeaders });
       const { data, error } = await admin
         .from("clients")
         .select("id, entreprise, contract_type")
         .ilike("entreprise", `%${q}%`)
-        .limit(5);
+        .limit(10);
       if (error) throw error;
       if (!data || data.length === 0) {
         return Response.json({ ok: false, error: "not_found" }, { headers: corsHeaders });
       }
-      // exact match priority
-      const exact = data.find((c) => c.entreprise.toLowerCase() === q.toLowerCase());
+      // exact match priority (insensible à la casse / espaces)
+      const exact = data.find((c) => c.entreprise.trim().toUpperCase() === q);
       const client = exact ?? data[0];
       return Response.json({ ok: true, client_id: client.id, entreprise: client.entreprise }, { headers: corsHeaders });
     }

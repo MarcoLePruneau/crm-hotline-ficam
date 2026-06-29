@@ -2,3 +2,9 @@ project_id = "qomhtwiyjlbltgzxgiko"
 
 [functions.outlook-sync]
 verify_jwt = false
+
+[functions.hotline-pop3]
+verify_jwt = false
+
+[functions.hotline-credentials]
+verify_jwt = true
