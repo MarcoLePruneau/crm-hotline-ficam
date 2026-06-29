@@ -276,6 +276,68 @@ export type Database = {
         }
         Relationships: []
       }
+      hotline_credentials: {
+        Row: {
+          created_at: string
+          id: string
+          login: string
+          password: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          login?: string
+          password: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          login?: string
+          password?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      hotline_email_log: {
+        Row: {
+          from_address: string | null
+          id: string
+          message_id: string
+          processed_at: string
+          subject: string | null
+          ticket_id: string | null
+        }
+        Insert: {
+          from_address?: string | null
+          id?: string
+          message_id: string
+          processed_at?: string
+          subject?: string | null
+          ticket_id?: string | null
+        }
+        Update: {
+          from_address?: string | null
+          id?: string
+          message_id?: string
+          processed_at?: string
+          subject?: string | null
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotline_email_log_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outlook_sync_state: {
         Row: {
           calendar_email: string
